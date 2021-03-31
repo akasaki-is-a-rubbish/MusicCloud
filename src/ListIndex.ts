@@ -287,8 +287,8 @@ export class ListIndexViewItem extends SidebarItem {
                 I`visibility_1`;
         domtag.textContent = tagText;
         domtag.style.display = tagText ? 'block' : 'none';
-        this.dom.style.paddingTop = tagText ? '6px' : '';
-        this.dom.style.paddingBottom = tagText ? '20px' : '';
+        this.dom.style.paddingTop = tagText ? '.3em' : '';
+        this.dom.style.paddingBottom = tagText ? '1.2em' : '';
     }
     onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
         var m = new ContextMenu();

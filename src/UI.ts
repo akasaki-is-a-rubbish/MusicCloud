@@ -244,13 +244,13 @@ export const ui = new class {
         setState(state: this['state']) {
             var btn = this.btnPlay;
             if (state === 'none') {
-                btn.text = I`Play`; btn.toggleClass('disabled', true);
+                bottomBar.setPlayIcon(true); btn.toggleClass('disabled', true);
             } else if (state === 'paused') {
-                btn.text = I`Play`; btn.toggleClass('disabled', false);
+                bottomBar.setPlayIcon(true); btn.toggleClass('disabled', false);
             } else if (state === 'playing') {
-                btn.text = I`Pause`; btn.toggleClass('disabled', false);
+                bottomBar.setPlayIcon(false); btn.toggleClass('disabled', false);
             } else if (state === 'stalled') {
-                btn.text = I`Pause...`; btn.toggleClass('disabled', false);
+                bottomBar.setPlayIcon(false); btn.toggleClass('disabled', false);
             } else {
                 throw new Error("invalid state value: " + state);
             }

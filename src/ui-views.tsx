@@ -3,6 +3,10 @@ import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView,
 import { utils, BuildDomExpr, Func, EventRegistrations, Action, Ref } from "./utils";
 import { I } from "./I18n";
 import svgSettings from "../resources/settings-24px.svg";
+import svgPlay from "../resources/play_circle-24px.svg";
+import svgPause from "../resources/pause_circle-24px.svg";
+import svgPrev from "../resources/skip_previous-24px.svg";
+import svgNext from "../resources/skip_next-24px.svg";
 import { settingsUI } from "./SettingsUI";
 
 export class MainContainer extends View {
@@ -26,6 +30,9 @@ export class MainContainer extends View {
 }
 
 export class BottomBar extends View {
+    btnPlay = new Ref<HTMLElement>();
+    btnPrev = new Ref<HTMLElement>();
+    btnNext = new Ref<HTMLElement>();
     createDom() {
         return (
             <div id="bottombar">
@@ -36,17 +43,24 @@ export class BottomBar extends View {
                 <div class="btn-progress" id="progressbar">
                     <div class="btn-fill" id="progressbar-fill"></div>
                 </div>
+                <div id="playcontrol">
+                    <div id="btn-prevtrack" class="prev_n_next" tabindex="0" ref={this.btnPrev}><Icon icon={svgPrev} /></div>
+                    <div id="btn-play" tabindex="0" ref={this.btnPlay}></div>
+                    <div id="btn-nexttrack" class="prev_n_next" tabindex="0" ref={this.btnNext}><Icon icon={svgNext} /></div>
+                </div>
                 <div id="bottombar-btns" class="flexbox-h">
-                    <div id="btn-play" class="btn i18ne" tabindex="0">Play</div>
-                    <div id="btn-prevtrack" class="btn i18ne" tabindex="0">prev_track</div>
-                    <div id="btn-nexttrack" class="btn i18ne" tabindex="0">next_track</div>
-                    <div id="btn-volume" class="btn" tabindex="0"></div>
-                    <div id="btn-loop" class="btn" tabindex="0" hidden></div>
+                    {/* <div id="btn-volume" class="btn" tabindex="0"></div> */}
+                    {/* <div id="btn-loop" class="btn" tabindex="0" hidden></div> */}
                     <div id="bottombar-trackinfo" class="flex-1"></div>
-                    <div class="btn" id="btnPin" tabindex="0">Pin</div>
+                    {/* <div class="btn" id="btnPin" tabindex="0">Pin</div> */}
                 </div>
             </div>
         );
+    }
+    setPlayIcon(play: boolean) {
+        const btn = this.btnPlay.value!;
+        utils.clearChildren(btn);
+        btn.appendChild(new Icon({ icon: play ? svgPlay : svgPause }).dom);
     }
 }
 
@@ -74,7 +88,7 @@ export class SettingsBtn extends View {
     createDom() {
         return (
             <div class="item" id="settings-btn">
-                <Icon icon={svgSettings}/>
+                <Icon icon={svgSettings} />
             </div>
         );
     }
