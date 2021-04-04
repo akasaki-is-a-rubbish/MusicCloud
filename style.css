@@ -555,7 +555,7 @@ html, body {
     transform: translate(0, 0);
     transition: transform .3s;
     background: var(--color-bg);
-    box-shadow: 0 0px 3px var(--color-shadow);
+    /* box-shadow: 0 0px 3px var(--color-shadow); */
     z-index: 10001;
     contain: layout;
     will-change: transform;
@@ -564,7 +564,7 @@ html, body {
 .bottompinned #bottombar {
     box-sizing: content-box;
     box-shadow: none;
-    border-top: 1px solid var(--color-bg-cc);
+    /* border-top: 1px solid var(--color-bg-cc); */
 }
 
 #bottombar.show {
