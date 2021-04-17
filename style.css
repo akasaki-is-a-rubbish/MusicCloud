@@ -491,13 +491,13 @@ html, body {
 .trackitem.uploads-item.state-done .uploads-state {
     color: #66bb6a;
 }
-
+/* 
 @media only screen and (min-width: 1000px) {
     .trackitem .duration {
         display: block;
         flex: 4em;
     }
-}
+} */
 
 @media only screen and (max-width: 500px) {
     .trackitem {
