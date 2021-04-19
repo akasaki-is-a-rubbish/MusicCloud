@@ -213,7 +213,8 @@ export const ui = new class {
 
         init() {
             this.setState('none');
-            this.btnPlay.onActive.add(() => {
+            this.btnPlay.onActive.add((e) => {
+                e.preventDefault();
                 var state = playerCore.state;
                 if (state === 'paused') playerCore.play();
                 else playerCore.pause();
@@ -223,8 +224,8 @@ export const ui = new class {
                 var next = modes[(modes.indexOf(playerCore.loopMode) + 1) % modes.length];
                 playerCore.loopMode = next;
             });
-            this.btnPrev.onActive.add(() => playerCore.prev());
-            this.btnNext.onActive.add(() => playerCore.next());
+            this.btnPrev.onActive.add((e) => { e.preventDefault(); playerCore.prev(); });
+            this.btnNext.onActive.add((e) => { e.preventDefault(); playerCore.next(); });
             playerCore.onLoopModeChanged.add(() => this.updateLoopMode())();
             playerCore.onTrackChanged.add(() => this.updateLoopMode())();
             playerCore.onStateChanged.add(() => {

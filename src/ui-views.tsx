@@ -44,14 +44,14 @@ export class BottomBar extends View {
                     <div class="btn-fill" id="progressbar-fill"></div>
                 </div>
                 <div id="playcontrol">
-                    <div id="btn-prevtrack" class="prev_n_next" tabindex="0" ref={this.btnPrev}><Icon icon={svgPrev} /></div>
-                    <div id="btn-play" tabindex="0" ref={this.btnPlay}></div>
-                    <div id="btn-nexttrack" class="prev_n_next" tabindex="0" ref={this.btnNext}><Icon icon={svgNext} /></div>
+                    <div id="btn-prevtrack" class="prev_n_next clickable" tabindex="0" ref={this.btnPrev}><Icon icon={svgPrev} /></div>
+                    <div id="btn-play" class="clickable" tabindex="0" ref={this.btnPlay}></div>
+                    <div id="btn-nexttrack" class="prev_n_next clickable" tabindex="0" ref={this.btnNext}><Icon icon={svgNext} /></div>
                 </div>
                 <div id="bottombar-btns" class="flexbox-h">
                     {/* <div id="btn-volume" class="btn" tabindex="0"></div> */}
                     {/* <div id="btn-loop" class="btn" tabindex="0" hidden></div> */}
-                    <div id="bottombar-trackinfo" class="flex-1"></div>
+                    <div id="bottombar-trackinfo" class="flex-1 no-selection clickable"></div>
                     {/* <div class="btn" id="btnPin" tabindex="0">Pin</div> */}
                 </div>
             </div>

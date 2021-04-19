@@ -586,8 +586,8 @@ html, body {
 }
 
 #bottombar.show #progressbar {
-    width: calc(100% - 6em - 180px);
-    transform: translate(calc(3em + 180px), 7.5px);
+    width: calc(100% - 2em - 180px);
+    transform: translate(calc(1em + 180px), 7.5px);
 }
 
 #bottombar.show #progressbar, #bottombar.show #progressbar-filxl {
@@ -603,6 +603,7 @@ html, body {
 }
 
 #progressbar-label-cur, #progressbar-label-total {
+    display: none;
     width: 3em;
     margin: 0 10px;
     text-align: center;
@@ -635,11 +636,11 @@ html, body {
 #playcontrol {
     position: absolute;
     left: 10px;
+    display: flex;
 }
 
 #playcontrol > * {
     color: var(--color-primary);
-    display: inline-block;
     margin: 10px 5px;
     font-size: 50px;
 }
