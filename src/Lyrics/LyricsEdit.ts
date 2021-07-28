@@ -1,20 +1,20 @@
-import { Track } from './Track';
-import { ui } from './UI';
-import { I } from './I18n';
-import { BuildDomExpr, utils } from './utils';
+import { Track } from '../Track/Track';
+import { ui } from '../Infra/UI';
+import { I } from '../I18n/I18n';
+import { BuildDomExpr } from '../Infra/utils';
 import { LyricsView, SpanView } from './LyricsView';
-import { router } from './Router';
+import { router } from '../Infra/Router';
 import { serialize, parse } from './Lyrics';
-import { playerCore } from './PlayerCore';
-import { Toast, InputView } from './viewlib';
-import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
+import { playerCore } from '../Player/PlayerCore';
+import { Toast, InputView, numLimit } from '../Infra/viewlib';
+import { SidebarItem, ContentView, ContentHeader, ActionBtn } from '../Infra/ui-views';
 
 export const lyricsEdit = new class {
     sidebarItem: SidebarItem;
     view: LyricsEditContentView;
     startEdit(track: Track, lyrics: string) {
         if (!this.view) {
-            this.sidebarItem = new SidebarItem({ text: I`Edit Lyrics` });
+            this.sidebarItem = new SidebarItem({ text: () => I`Edit Lyrics` });
             this.view = new LyricsEditContentView();
             ui.sidebarList.addFeatureItem(this.sidebarItem);
             router.addRoute({
@@ -109,7 +109,7 @@ class LyricsEditContentView extends ContentView {
     setCurrentView(view: this['currentView']) {
         if (this.currentView) {
             this.currentView.onHide();
-            this.currentView.dom.remove();
+            this.removeView(this.currentView);
             this.currentView = null;
         }
         if (view) {
@@ -122,7 +122,7 @@ class LyricsEditContentView extends ContentView {
     private serializeLyricsFromView() {
         if (this.mode === 'lyrics') {
             if (this.lyricsView.modified)
-                this.lyrics = serialize(this.lyricsView.lyrics!);
+                this.lyrics = serialize(this.lyricsView.lyrics!, true);
         } else if (this.mode === 'source') {
             this.lyrics = this.sourceView.value;
         } else {
@@ -195,7 +195,7 @@ class EditableLyricsView extends LyricsView {
         });
         this.onSpanClick.add((s) => {
             if (s.span.startTime != null && s.span.startTime >= 0)
-                playerCore.currentTime = utils.numLimit(s.span.startTime! - 3, 0, Infinity);
+                playerCore.currentTime = numLimit(s.span.startTime! - 3, 0, Infinity);
             this.setNextSpans(this.getSpans(s, 'here'));
         });
         this.dom.addEventListener('keydown', (ev) => {
@@ -279,6 +279,7 @@ class EditableLyricsView extends LyricsView {
 }
 
 export class LyricsSourceEditView extends InputView {
+    //@ts-expect-error
     dom: HTMLTextAreaElement;
     get value() { return this.dom.value; }
     set value(val) { this.dom.value = val; }

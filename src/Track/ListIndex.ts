@@ -1,19 +1,19 @@
 // file: ListIndex.ts
 
-import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n, jsx, jsxBuild, SectionAction } from "./viewlib";
-import { utils, BuildDomExpr } from "./utils";
-import { I } from "./I18n";
+import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n, jsx, jsxBuild, SectionAction, clearChildren, createName, objectApply, appendView } from "../Infra/viewlib";
+import { BuildDomExpr } from "../Infra/utils";
+import { I } from "../I18n/I18n";
 import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
-import { user } from "./User";
-import { Api } from "./apidef";
-import { router } from "./Router";
-import { ui } from "./UI";
-import { SidebarItem, setScrollableShadow, CopyMenuItem, Icon } from "./ui-views";
-import { playerCore } from "./PlayerCore";
-import { api } from "./Api";
+import { user } from "../API/User";
+import { Api } from "../API/apidef";
+import { router } from "../Infra/Router";
+import { ui } from "../Infra/UI";
+import { SidebarItem, setScrollableShadow, CopyMenuItem, Icon } from "../Infra/ui-views";
+import { playerCore } from "../Player/PlayerCore";
+import { api } from "../API/Api";
 import { uploads } from "./Uploads";
-import svgAudio from "../resources/audiotrack-24px.svg";
-import svgAdd from "../resources/add-24px.svg";
+import svgAudio from "../../resources/audiotrack-24px.svg";
+import svgAdd from "../../resources/add-24px.svg";
 
 export class ListIndex {
     loadedList: { [x: number]: TrackList; } = {};
@@ -112,16 +112,16 @@ export class ListIndex {
             }
         });
         this.section = new Section({
-            title: I`Playlists`,
+            title: () => I`Playlists`,
             content: this.listView
         });
         const icon = new Icon({ icon: svgAdd });
         icon.dom.style.fontSize = '1.4em';
-        this.section.addAction(jsxBuild(jsx(SectionAction, {
+        this.section.addAction(jsxBuild<SectionAction>(jsx(SectionAction, {
             onActive: () => {
                 this.newTracklist();
             }
-        } as any, [ icon ])));
+        }, [ icon ])));
         ui.sidebarList.container.appendView(this.section);
         ui.sidebar.dom.addEventListener('scroll', (ev) => {
             if (ev.eventPhase === Event.AT_TARGET) {
@@ -203,7 +203,7 @@ export class ListIndex {
     onInfoChanged(id: number, info: Api.TrackListInfo) {
         var lvi = this.getViewItem(id);
         if (lvi) {
-            utils.objectApply(lvi.listInfo, info);
+            objectApply(lvi.listInfo, info);
             lvi.updateDom();
         }
     }
@@ -238,7 +238,7 @@ export class ListIndex {
         var list: Api.TrackListInfo = {
             id,
             owner: user.id,
-            name: utils.createName(
+            name: createName(
                 (x) => x ? I`New Playlist (${x + 1})` : I`New Playlist`,
                 (x) => !!this.listView.find((l) => l.listInfo.name === x)),
             visibility: 0,
@@ -260,20 +260,20 @@ export class ListIndexViewItem extends SidebarItem {
     playing = false;
     constructor(init: Partial<ListIndexViewItem>) {
         super({});
-        utils.objectApply(this, init);
+        objectApply(this, init);
     }
     protected createDom(): BuildDomExpr {
         return {
             tag: 'li.item.indexitem.no-selection',
             tabIndex: 0,
             child: [
-                { _key: 'tag', tag: 'span.tag' },
+                { _id: 'tag', tag: 'span.tag' },
                 { tag: 'span.name.flex-1', text: () => this.listInfo?.name ?? this.text },
                 {
                     tag: 'span.state',
                     update: (dom) => {
                         var icon = this.playing ? new Icon({ icon: svgAudio }) : null;
-                        utils.clearChildren(dom);
+                        clearChildren(dom);
                         if (icon) dom.appendChild(icon.dom);
                         dom.hidden = !icon;
                     },
@@ -283,7 +283,7 @@ export class ListIndexViewItem extends SidebarItem {
     }
     updateDom() {
         super.updateDom();
-        var domtag = this.domctx.dict.tag;
+        var domtag = this.getDomById('tag')!;
         var tagText = (!this.listInfo || this.listInfo.visibility == 0) ? "" :
             (this.listInfo.owner == user.id && this.listInfo.visibility == 1) ? I`my_visibility_1` :
                 I`visibility_1`;

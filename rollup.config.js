@@ -2,11 +2,11 @@ import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import { terser } from "rollup-plugin-terser";
 
-import { readFile } from "fs/promises";
 import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
 
+/** @type {() => import('rollup').RollupOptions} */
 const rollupConfig = () => ({
     input: './src/main.ts',
     output: {
@@ -79,7 +79,7 @@ function transformSourcemapPath() {
     return (rel, path) => {
         rel = rel.replace(/\\/g, '/');
         if (rel.startsWith('node_modules')) {
-            var mat = rel.match(/^node_modules\/((?:@[\w\-_]+\/)?[\w\-_]+)\/(.*)$/);
+            var mat = rel.match(/node_modules\/((?:@[\w\-_]+\/)?[\w\-_]+)\/(.*)$/);
             if (!mat) {
                 console.warn(['sourcemapPathTransform', rel]);
             }

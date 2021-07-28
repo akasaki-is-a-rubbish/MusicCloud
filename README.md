@@ -7,7 +7,9 @@ MusicCloud is a music software built with [webfx](https://github.com/lideming/we
 This repo contains the frontend parts of MusicCloud.
 
 [The server](https://github.com/lideming/MusicCloudServer) is also open-sourced.
-You can easily run your own MusicCloud instance in Docker.
+You can easily [run your own MusicCloud instance in Docker](https://github.com/lideming/MusicCloudServer#run-in-docker-).
+
+[![Build](https://github.com/lideming/MusicCloud/actions/workflows/main.yml/badge.svg)](https://github.com/lideming/MusicCloud/actions/workflows/main.yml)
 
 
 ## Features
@@ -19,34 +21,34 @@ You can easily run your own MusicCloud instance in Docker.
 * Search tracks
 * Lyrics with translation and ruby annotations, extended from LRC.
 * Comment and discussion
-* Todo:
-    - [ ] Player control UI rework
-    - [ ] Search playlists and users
-    - [ ] Front page
-    - [ ] Albums
-    - [ ] Cross-device interaction
-    - [ ] Quick switching bitrate
-    - [ ] Cache management
-    - [ ] Offline usability
+* More in [TODO](https://github.com/lideming/MusicCloud/projects/1)
 
 
 ## Configure Build
 
-Modify `src/Settings.ts` for API location, debug options etc.
+Modify `src/Settings/Settings.ts` for API location, debug options etc.
 
 
 ## Build
 
-Ensure development dependencies are installed:
+Though `npm` may still work, we use [pnpm](https://pnpm.io/) as the package manager.
+
+Install `pnpm` if needed, see [pnpm docs](https://pnpm.io/installation) for more examples:
 
 ```
-npm install
+npx pnpm add -g pnpm
+```
+
+Install development dependencies:
+
+```
+pnpm install
 ```
 
 Start the building process:
 
 ```
-npm run build
+pnpm build
 ```
 
 Then `bundle.js` should be generated from source files.
@@ -62,4 +64,4 @@ Note that `style.css` is included in `bundle.js`.
 ## Reusable Components
 
 * [webfx](https://github.com/lideming/webfx) - Web UI framework with utilities and basic views
-* `src/Lyrics.ts` - Lyrics parser (LRC compatible)
+* `src/Lyrics/Lyrics.ts` - Lyrics parser/serializer (LRC with optional MusicCloud extension)

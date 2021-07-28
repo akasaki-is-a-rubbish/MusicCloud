@@ -1,11 +1,11 @@
-import { utils, TextCompositionWatcher } from "./utils";
-import { I } from "./I18n";
-import { Toast, Dialog, LabeledInput, TabBtn, LoadingIndicator } from "./viewlib";
-import { Api } from "./apidef";
-import { api } from "./Api";
+import { TextCompositionWatcher } from "../Infra/utils";
+import { I } from "../I18n/I18n";
+import { Toast, Dialog, LabeledInput, TextBtn, LoadingIndicator, objectApply, sleepAsync } from "../Infra/viewlib";
+import { Api } from "../API/apidef";
+import { api } from "../API/Api";
 import { TrackList } from "./TrackList";
-import { lyricsEdit, LyricsSourceEditView } from "./LyricsEdit";
-import { user } from "./User";
+import { lyricsEdit, LyricsSourceEditView } from "../Lyrics/LyricsEdit";
+import { user } from "../API/User";
 
 /** A track binding with list */
 export class Track {
@@ -28,7 +28,7 @@ export class Track {
     } = undefined;
     get canEdit() { return user.role == 'admin' || user.info.id == this.owner; }
     constructor(init: Partial<Track>) {
-        utils.objectApply(this, init);
+        objectApply(this, init);
     }
     toString() {
         return `${I`Track ID`}: ${this.id}\r\n${I`Name`}: ${this.name}\r\n${I`Artist`}: ${this.artist}`;
@@ -42,7 +42,7 @@ export class Track {
     updateFromApiTrack(t: Api.Track) {
         if (this.id !== t.id)
             throw new Error('Bad track id');
-        // utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
+        // objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
         this.infoObj = t;
     }
     startEdit(ev?: MouseEvent) {
@@ -98,19 +98,19 @@ export class Track {
 }
 
 export class TrackDialog extends Dialog {
-    width = '500px';
     track: Track;
     inputName = new LabeledInput({ label: I`Name` });
     inputArtist = new LabeledInput({ label: I`Artist` });
     inputAlbum = new LabeledInput({ label: I`Album` });
     inputAlbumArtist = new LabeledInput({ label: I`Album artist` });
     inputLyrics = new LabeledInputWithLoading({ label: I`Lyrics` });
-    btnSave = new TabBtn({ text: I`Save`, right: true });
-    btnEditLyrics = new TabBtn({ text: I`Edit Lyrics`, right: true });
+    btnSave = new TextBtn({ text: I`Save`, right: true });
+    btnEditLyrics = new TextBtn({ text: I`Edit Lyrics`, right: true });
     autoFocus = this.inputName.input;
     compositionWatcher: TextCompositionWatcher;
     constructor() {
         super();
+        this.width = '500px';
         this.resizable = true;
         this.contentFlex = true;
         this.inputLyrics.input = new LyricsSourceEditView();
@@ -202,7 +202,7 @@ export class TrackDialog extends Dialog {
         } catch (error) {
             console.error('[Track] saving error', error);
             this.btnSave.updateWith({ clickable: false, text: I`Error` });
-            await utils.sleepAsync(3000);
+            await sleepAsync(3000);
         }
         this.btnSave.updateWith({ clickable: true, text: I`Save` });
     }

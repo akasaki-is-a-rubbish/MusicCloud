@@ -1,30 +1,39 @@
 // file: ui-views.ts
-import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit, } from "./viewlib";
-import { utils, BuildDomExpr, Func, EventRegistrations, Action, Ref } from "./utils";
-import { I } from "./I18n";
-import svgSettings from "../resources/settings-24px.svg";
-import svgPlay from "../resources/play_circle-24px.svg";
-import svgPause from "../resources/pause_circle-24px.svg";
-import svgPrev from "../resources/skip_previous-24px.svg";
-import svgNext from "../resources/skip_next-24px.svg";
-import { settingsUI } from "./SettingsUI";
+import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit, jsx, ListView, toggleClass, numLimit, objectInit, clearChildren } from "./viewlib";
+import { BuildDomExpr, Func, EventRegistrations, Action, Ref, FuncOrVal } from "./utils";
+import { I } from "../I18n/I18n";
+import svgSettings from "../../resources/settings-24px.svg";
+import svgPlay from "../../resources/play_circle-24px.svg";
+import svgPause from "../../resources/pause_circle-24px.svg";
+import svgPrev from "../../resources/skip_previous-24px.svg";
+import svgNext from "../../resources/skip_next-24px.svg";
+import { settingsUI } from "../Settings/SettingsUI";
+import { ui } from "./UI";
 
 export class MainContainer extends View {
+    sidebar = new Sidebar();
+    contentOuter = new View(<main id="content-outer"></main>);
     createDom() {
         return (
             <div id="main-container" class="no-transition">
-                <nav id="sidebar" class="no-selection">
-                    <div id="sidebar-header">
-                        <SettingsBtn />
-                    </div>
-                    <div id="sidebar-features">
-                    </div>
-                    <div id="sidebar-list">
-                    </div>
-                </nav>
-                <main id="content-outer">
-                </main>
+                {this.sidebar}
+                {this.contentOuter}
             </div>
+        );
+    }
+}
+
+export class Sidebar extends View {
+    header = new View(<div id="sidebar-header"><SettingsBtn /></div>);
+    features = new ListView(<div id="sidebar-features"></div>);
+    list = new View(<div id="sidebar-list"></div>);
+    createDom() {
+        return (
+            <nav id="sidebar" class="no-selection">
+                {this.header}
+                {this.features}
+                {this.list}
+            </nav>
         );
     }
 }
@@ -59,23 +68,25 @@ export class BottomBar extends View {
     }
     setPlayIcon(play: boolean) {
         const btn = this.btnPlay.value!;
-        utils.clearChildren(btn);
+        clearChildren(btn);
         btn.appendChild(new Icon({ icon: play ? svgPlay : svgPause }).dom);
     }
 }
 
 export class SidebarItem extends ListViewItem {
-    text: string = '';
+    _text: FuncOrVal<string> = '';
+    get text() { return getFuncVal(this._text); }
+    set text(val: FuncOrVal<string>) { this._text = val; }
     contentView: ContentView | null = null;
     constructor(init?: ObjectInit<SidebarItem>) {
         super();
-        utils.objectInit(this, init);
+        objectInit(this, init);
     }
     protected createDom(): BuildDomExpr {
         return {
             tag: 'li.item.no-selection',
             tabIndex: 0,
-            text: () => this.text
+            text: () => getFuncVal(this.text)
         };
     }
     bindContentView(viewFunc: Func<ContentView>) {
@@ -104,10 +115,19 @@ export class ContentView extends View {
     private _isVisible = false;
     public get isVisible() { return this._isVisible; }
 
+    _lastRenderedLanguage = '';
+
     onShow() {
         this._isVisible = true;
+        if (this.domCreated && this._lastRenderedLanguage != ui.lang.curLang) {
+            this.updateAll();
+        }
     }
     onDomInserted() { }
+    updateDom() {
+        super.updateDom();
+        this._lastRenderedLanguage = ui.lang.curLang;
+    }
     onRemove() {
         this._isVisible = false;
         this._shownEvents?.removeAll();
@@ -120,8 +140,8 @@ export class ContentView extends View {
 }
 
 export class ContentHeader extends View {
-    catalog: string;
-    title: string;
+    catalog: FuncOrVal<string>;
+    title: FuncOrVal<string>;
     titleEditable = false;
     editHelper: EditableHelper;
     actions = new ContainerView<ActionBtn>({ tag: 'div.actions' });
@@ -130,7 +150,7 @@ export class ContentHeader extends View {
     onTitleEdit: (title: string) => void;
     constructor(init?: ObjectInit<ContentHeader>) {
         super();
-        if (init) utils.objectInit(this, init);
+        if (init) objectInit(this, init);
         this.titleView.onActive.add(async () => {
             if (!this.titleEditable) return;
             this.editHelper = this.editHelper || new EditableHelper(this.titleView.dom);
@@ -166,9 +186,9 @@ export class ContentHeader extends View {
         setScrollableShadow(this.dom, this.scrollbox?.scrollTop ?? 0);
     }
     titleView = new View({
-        tag: 'span.title.no-selection', text: () => this.title,
+        tag: 'span.title.no-selection', text: () => getFuncVal(this.title),
         update: (dom) => {
-            utils.toggleClass(dom, 'editable', !!this.titleEditable);
+            toggleClass(dom, 'editable', !!this.titleEditable);
             if (this.titleEditable) dom.title = I`Click to edit`;
             else dom.removeAttribute('title');
             dom.tabIndex = this.titleEditable ? 0 : -1;
@@ -177,7 +197,7 @@ export class ContentHeader extends View {
     titlebar = new View({
         tag: 'div.titlebar.clearfix',
         child: [
-            { tag: 'span.catalog.no-selection', text: () => this.catalog, hidden: () => !this.catalog },
+            { tag: 'span.catalog.no-selection', text: () => getFuncVal(this.catalog), hidden: () => !this.catalog },
             this.titleView,
             this.actions
         ]
@@ -190,12 +210,16 @@ export class ContentHeader extends View {
     }
 }
 
+function getFuncVal<T>(val: FuncOrVal<T>) {
+    return typeof val == 'function' ? (val as any)() : val;
+}
+
 export class ActionBtn extends TextView {
     get active() { return this.dom.classList.contains('active'); }
     set active(val) { this.toggleClass('active', val); }
     constructor(init?: ObjectInit<ActionBtn>) {
         super();
-        utils.objectInit(this, init);
+        objectInit(this, init);
     }
     createDom(): BuildDomExpr {
         return { tag: 'span.action.clickable.no-selection', tabIndex: 0 };
@@ -203,7 +227,7 @@ export class ActionBtn extends TextView {
 }
 
 export function setScrollableShadow(dom: HTMLElement, position: number) {
-    dom.style.boxShadow = `0 0 ${utils.numLimit(Math.log(position) * 2, 0, 10)}px var(--color-light-shadow)`;
+    dom.style.boxShadow = `0 0 ${numLimit(Math.log(position) * 2, 0, 10)}px var(--color-light-shadow)`;
 }
 
 export class CopyMenuItem extends MenuItem {
@@ -229,6 +253,6 @@ export class Icon extends View {
     set icon(val) { this.dom.innerHTML = val; }
     constructor(init?: ObjectInit<Icon>) {
         super({ tag: 'span.icon' });
-        utils.objectInit(this, init);
+        objectInit(this, init);
     }
 }

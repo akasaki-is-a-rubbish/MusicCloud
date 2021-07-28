@@ -1,19 +1,19 @@
-import { router } from './Router';
-import { ui } from './UI';
-import { Lazy, Callbacks, BuildDomExpr } from './utils';
-import { I } from "./I18n";
-import { ListContentView } from './ListContentView';
-import { InputView, View, ButtonView, LoadingIndicator, ListView, LazyListView } from './viewlib';
-import { api } from './Api';
-import { Api } from './apidef';
+import { router } from '../Infra/Router';
+import { ui } from '../Infra/UI';
+import { Lazy, Callbacks, BuildDomExpr } from '../Infra/utils';
+import { I } from "../I18n/I18n";
+import { ListContentView } from '../Infra/ListContentView';
+import { InputView, View, ButtonView, LoadingIndicator, ListView, LazyListView } from '../Infra/viewlib';
+import { api } from '../API/Api';
+import { Api } from '../API/apidef';
 import { TrackViewItem, TrackList } from './TrackList';
 import { Track } from "./Track";
-import { playerCore } from './PlayerCore';
+import { playerCore } from '../Player/PlayerCore';
 import { ListIndexViewItem } from './ListIndex';
 
 export const search = new class {
     init() {
-        this.sidebarItem = new ListIndexViewItem({ text: I`Search` });
+        this.sidebarItem = new ListIndexViewItem({ text: () => I`Search` });
         router.addRoute({
             path: ['search'],
             contentView: () => this.view,
@@ -38,7 +38,7 @@ export const search = new class {
 };
 
 class SearchView extends ListContentView {
-    title = I`Search`;
+    title = () => I`Search`;
     searchbar = new SearchBar();
     currentQuery: string;
     tempList: TrackList | null = null;

@@ -715,7 +715,9 @@ html, body {
 }
 
 .comment-editor .submit {
+    margin: 10px 0 0 auto;
     line-height: 2;
+    width: 8em;
 }
 
 .comment {
@@ -924,4 +926,73 @@ html, body {
         transform: translate(-50%, -100%) scale(1);
         opacity: 1;
     }
+}
+
+/*
+
+.btn,
+.item,
+.sidebar-toggle,
+.context-menu,
+.toast,
+.input-text,
+.dialog,
+.upload-area {
+    border-radius: 19px;
+}
+
+.input-text {
+    padding: .5em 10px;
+}
+
+#sidebar-features .item,
+#sidebar-list .item {
+    border-radius: 0 19px 19px 0;
+    margin-right: 6px;
+    margin-left: 0;
+}
+
+.item {
+    margin: 2px;
+}
+
+.context-menu .item {
+    margin: 2px 4px;
+}
+
+.context-menu {
+    padding: 2px 0;
+}
+
+#settings-btn {
+    width: 46px;
+}
+
+#login-state {
+    height: 46px;
+}
+
+.sidebar-toggle {
+    left: 2px;
+    top: 2px;
+    width: 46px;
+    height: 46px;
+    background: none;
+}
+
+.sidebar-toggle:hover {
+    background: var(--color-bg-ee);
+}
+
+*/
+
+.trackitem .name, .trackitem .artist {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;  
+}
+
+.trackitem .duration {
+    text-align: center;
 }

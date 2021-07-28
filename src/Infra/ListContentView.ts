@@ -1,8 +1,7 @@
 // file: ListContentView.ts
 
-import { View, ListViewItem, ListView, LazyListView, LoadingIndicator } from "./viewlib";
-import { utils } from "./utils";
-import { I } from "./I18n";
+import { View, ListViewItem, ListView, LazyListView, LoadingIndicator, buildDOM, FuncOrVal } from "./viewlib";
+import { I } from "../I18n/I18n";
 import { ContentView, ContentHeader, ActionBtn } from "./ui-views";
 
 class DataBackedListViewItem extends ListViewItem {
@@ -40,6 +39,7 @@ class DataBackedListView<T extends DataBackedListViewItem, TData> extends ListVi
 
 
 export class ListContentView extends ContentView {
+    //@ts-expect-error
     dom: HTMLElement;
 
     header: ContentHeader;
@@ -65,7 +65,7 @@ export class ListContentView extends ContentView {
     }
 
     createDom() {
-        return utils.buildDOM({ tag: 'div.listcontentview' });
+        return buildDOM({ tag: 'div.listcontentview' });
     }
 
     postCreateDom() {
@@ -74,23 +74,23 @@ export class ListContentView extends ContentView {
         this.appendScrollBox();
     }
 
-    title: string;
+    title: FuncOrVal<string>;
     protected createHeader(): ContentHeader {
         return new ContentHeader({ title: this.title });
     }
 
     protected appendHeader() {
         this.header = this.createHeader();
-        this.header.actions.addView(this.refreshBtn = new ActionBtn({ text: I`Refresh` }));
-        this.header.actions.addView(this.selectAllBtn = new ActionBtn({ text: I`Select all` }));
-        this.header.actions.addView(this.selectBtn = new ActionBtn({ text: I`Select` }));
+        this.header.actions.addView(this.refreshBtn = new ActionBtn({ text: () => I`Refresh` }));
+        this.header.actions.addView(this.selectAllBtn = new ActionBtn({ text: () => I`Select all` }));
+        this.header.actions.addView(this.selectBtn = new ActionBtn({ text: () => I`Select` }));
         this.selectBtn.onActive.add(() => {
             this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
         });
         this.selectAllBtn.onActive.add(() => {
             this.listView.forEach(x => this.listView.selectionHelper.toggleItemSelection(x, true));
         });
-        this.dom.appendView(this.header);
+        this.appendView(this.header);
     }
 
     protected appendScrollBox() {
@@ -110,7 +110,7 @@ export class ListContentView extends ContentView {
         this.listView.lazy = true;
         this.listView.selectionHelper.onEnabledChanged.add(() => {
             this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
-            this.selectBtn.text = this.listView.selectionHelper.enabled ? I`Cancel` : I`Select`;
+            this.selectBtn.text = this.listView.selectionHelper.enabled ? () => I`Cancel` : () => I`Select`;
             this.selectAllBtn.hidden = !this.listView.selectionHelper.enabled;
         })();
         this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;

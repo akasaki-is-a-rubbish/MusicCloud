@@ -1,19 +1,19 @@
-import { router } from './Router';
-import { ui } from './UI';
-import { Lazy, BuildDomExpr, SettingItem } from './utils';
-import { I } from "./I18n";
-import { playerCore } from './PlayerCore';
-import { LyricsView } from './LyricsView';
-import { api } from './Api';
-import { SidebarItem, ContentView, ContentHeader, ActionBtn, setScrollableShadow } from './ui-views';
-import { LoadingIndicator, View, ViewToggle } from './viewlib';
-import { Api } from './apidef';
+import { router } from '../Infra/Router';
+import { ui } from '../Infra/UI';
+import { Lazy, BuildDomExpr, SettingItem } from '../Infra/utils';
+import { I } from "../I18n/I18n";
+import { playerCore } from '../Player/PlayerCore';
+import { LyricsView } from '../Lyrics/LyricsView';
+import { api } from '../API/Api';
+import { SidebarItem, ContentView, ContentHeader, ActionBtn, setScrollableShadow } from '../Infra/ui-views';
+import { LoadingIndicator, View, ViewToggle } from '../Infra/viewlib';
+import { Api } from '../API/apidef';
 import { Track } from './Track';
 
 
 export const nowPlaying = new class {
     init() {
-        var sidebarItem = new SidebarItem({ text: I`Now Playing` });
+        var sidebarItem = new SidebarItem({ text: () => I`Now Playing` });
         router.addRoute({
             path: ['nowplaying'],
             contentView: () => this.view,
@@ -52,7 +52,7 @@ class PlayingView extends ContentView {
             setScrollableShadow(this.dom, this.scrollbox!.scrollTop - this.lines.dom.offsetTop);
         }
     }({
-        title: I`Now Playing`
+        title: () => I`Now Playing`
     });
     infoView = new View({
         tag: 'div.infoview',

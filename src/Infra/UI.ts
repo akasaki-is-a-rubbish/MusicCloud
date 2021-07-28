@@ -1,8 +1,10 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, ContextMenu } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, ContextMenu, buildDOM, fadeout, formatTime, listenPointerEvents, numLimit, replaceChild, toggleClass, mountView, unmountView } from "./viewlib";
 import * as views from "./ui-views";
 import { MainContainer, BottomBar } from "./ui-views";
+
+View.debugging = true;
 
 views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.ContentView>) {
     this.onActive.add(() => {
@@ -19,16 +21,16 @@ views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.Con
 
 const mainContainer = new MainContainer();
 const bottomBar = new BottomBar();
-document.body.insertBefore(mainContainer.dom, document.body.firstChild);
-document.body.insertBefore(bottomBar.dom, mainContainer.dom.nextSibling);
+mountView(document.body, mainContainer);
+mountView(document.body, bottomBar);
 
 import { router } from "./Router";
-import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer, InputStateTracker, Toast, ToolTip } from "./utils";
-import { I18n, i18n, I } from "./I18n";
-import { Track } from "./Track";
-import { user } from "./User";
-import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
-import { uploads } from "./Uploads";
+import { SettingItem, BuildDomExpr, Func, Callbacks, Timer, InputStateTracker, Toast, ToolTip } from "./utils";
+import { I18n, i18n, I } from "../I18n/I18n";
+import { Track } from "../Track/Track";
+import { user } from "../API/User";
+import { playerCore, playingLoopModes } from "../Player/PlayerCore";
+import { uploads } from "../Track/Uploads";
 
 export const ui = new class {
     usingKeyboardInput = false;
@@ -42,8 +44,8 @@ export const ui = new class {
         this.sidebarLogin.init();
         this.windowTitle.reset();
         this.notification.init();
-        Dialog.defaultParent = new DialogParent(this.mainContainer.dom);
-        ToastsContainer.default.parentDom = this.mainContainer.dom;
+        Dialog.defaultParent = new DialogParent(mainContainer);
+        ToastsContainer.default.parentDom = mainContainer.dom;
         ToastsContainer.default.dom.style.position = 'absolote';
         router.addRoute({
             path: ['home'],
@@ -97,22 +99,25 @@ export const ui = new class {
     endPreload() {
         setTimeout(() => {
             ui.mainContainer.dom.classList.remove('no-transition');
-            utils.fadeout(document.getElementById('preload-overlay')!);
+            fadeout(document.getElementById('preload-overlay')!);
         }, 1);
     }
     isVisible() {
         return !document['hidden'];
     }
+    updateAllViews() {
+        mainContainer.updateAll();
+    }
     theme = new class {
         current: 'light' | 'dark' = 'light';
-        timer = new Timer(() => utils.toggleClass(document.body, 'changing-theme', false));
+        timer = new Timer(() => toggleClass(document.body, 'changing-theme', false));
         private rendered = false;
         siTheme = new SettingItem<this['current']>('mcloud-theme', 'str', 'light')
             .render((theme) => {
                 if (this.current !== theme) {
                     this.current = theme;
-                    if (this.rendered) utils.toggleClass(document.body, 'changing-theme', true);
-                    utils.toggleClass(document.body, 'dark', theme === 'dark');
+                    if (this.rendered) toggleClass(document.body, 'changing-theme', true);
+                    toggleClass(document.body, 'dark', theme === 'dark');
                     var meta = document.getElementById('meta-theme-color') as HTMLMetaElement;
                     meta.content = theme === 'dark' ? 'black' : '';
                     if (this.rendered) this.timer.timeout(500);
@@ -134,6 +139,7 @@ export const ui = new class {
                 i18n.curLang = lang;
                 document.body.lang = lang;
                 console.info(`[UI] Current language: '${i18n.curLang}' - '${I`English`}'`);
+                ui.updateAllViews();
             });
             i18n.renderElements(document.querySelectorAll('.i18ne'));
         }
@@ -148,7 +154,7 @@ export const ui = new class {
         siPin: SettingItem<boolean>;
         private pinned = true;
         InputStateTracker = new InputStateTracker(this.container);
-        hideTimer = new utils.Timer(() => { this.toggle(false); });
+        hideTimer = new Timer(() => { this.toggle(false); });
         shown = false;
         inTransition = false;
         setPinned(val?: boolean) {
@@ -158,13 +164,13 @@ export const ui = new class {
                 this.siPin.set(val);
             } else {
                 this.pinned = val;
-                utils.toggleClass(document.body, 'bottompinned', val);
+                toggleClass(document.body, 'bottompinned', val);
                 this.btnPin.text = val ? I`Unpin` : I`Pin`;
                 if (val) this.toggle(true);
             }
         }
         toggle(state?: boolean, hideTimeout?: number) {
-            this.shown = utils.toggleClass(this.container, 'show', state);
+            this.shown = toggleClass(this.container, 'show', state);
             if (state && hideTimeout && !this.pinned) this.updateState(hideTimeout);
         }
         private updateState(timeout = 200) {
@@ -259,10 +265,10 @@ export const ui = new class {
         }
         setProg(cur: number | undefined, total: number | undefined) {
             var prog = cur! / total!;
-            prog = utils.numLimit(prog, 0, 1);
+            prog = numLimit(prog, 0, 1);
             this.fill.style.width = (prog * 100) + '%';
-            this.labelCur.textContent = utils.formatTime(cur!);
-            this.labelTotal.textContent = utils.formatTime(total!);
+            this.labelCur.textContent = formatTime(cur!);
+            this.labelTotal.textContent = formatTime(total!);
         }
         updateLoopMode() {
             this.btnLoop.hidden = false;
@@ -271,11 +277,11 @@ export const ui = new class {
             this.btnPrev.toggleClass('disabled', !playerCore.getNextTrack(-1));
         }
         onProgressSeeking(cb: (percent: number) => void) {
-            var call = (offsetX) => { cb(utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
-            utils.listenPointerEvents(this.progbar, (e) => {
+            var call = (offsetX) => { cb(numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
+            listenPointerEvents(this.progbar, (e) => {
                 e.ev.preventDefault();
                 if (e.action != 'move') {
-                    utils.toggleClass(this.progbar, 'btn-down', e.action === 'down');
+                    toggleClass(this.progbar, 'btn-down', e.action === 'down');
                 }
                 if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
                     if ((e.type === 'mouse' && e.ev.buttons === 1)
@@ -298,7 +304,7 @@ export const ui = new class {
         setTrack(track: Track | null) {
             ui.windowTitle.setFromTrack(track);
             if (track) {
-                utils.replaceChild(this.element, utils.buildDOM({
+                replaceChild(this.element, buildDOM({
                     tag: 'span',
                     child: [
                         // 'Now Playing: ',
@@ -336,10 +342,10 @@ export const ui = new class {
                 if (this.float) this.toggleHide(true);
             });
             dragManager.onDragStart.add(() => {
-                utils.toggleClass(this.dom, 'peek', true);
+                toggleClass(this.dom, 'peek', true);
             });
             dragManager.onDragEnd.add(() => {
-                utils.toggleClass(this.dom, 'peek', false);
+                toggleClass(this.dom, 'peek', false);
             });
             this.dom.addEventListener('dragover', () => this.toggleHide(false));
         }
@@ -356,7 +362,7 @@ export const ui = new class {
         }
         toggleFloat(float?) {
             if (float !== undefined && !!float === this._float) return;
-            this._float = utils.toggleClass(document.body, 'float-sidebar', float);
+            this._float = toggleClass(document.body, 'float-sidebar', float);
             this.updateOverlay();
         }
         toggleBtn(show: boolean) {
@@ -371,7 +377,7 @@ export const ui = new class {
         }
 
         toggleHide(hide?) {
-            this._hide = utils.toggleClass(this.dom, 'hide', hide);
+            this._hide = toggleClass(this.dom, 'hide', hide);
             if (this.isMobile()) this._hideMobile = this._hide;
             else this._hideLarge = this._hide;
             this.toggleFloat(this.isMobile() || this._hide);
@@ -386,19 +392,22 @@ export const ui = new class {
                         onclick: () => this.toggleHide(true),
                         ondragover: () => this.toggleHide(true)
                     });
-                    ui.mainContainer.dom.appendView(this.overlay);
+                    mainContainer.appendView(this.overlay);
                 } else {
-                    utils.fadeout(this.overlay!.dom);
+                    const overlay = this.overlay!;
                     this.overlay = null;
+                    fadeout(overlay.dom).onFinished(() => {
+                        mainContainer.removeView(overlay);
+                    });
                 }
             }
         }
     };
     sidebarLogin = new class {
-        container = document.getElementById('sidebar-header')!;
+        container = mainContainer.sidebar.header;
         loginState = new views.SidebarItem();
         init() {
-            this.container.insertBefore(this.loginState.dom, this.container.firstChild);
+            this.container.addView(this.loginState, 0);
             this.loginState.dom.id = 'login-state';
             this.loginState.onActive.add((ev) => {
                 user.openUI(undefined, ev);
@@ -420,10 +429,9 @@ export const ui = new class {
         }
     };
     sidebarList = new class {
-        container = document.getElementById('sidebar-list')!;
+        container = mainContainer.sidebar.list;
 
-        features = document.getElementById('sidebar-features')!;
-        featuresListview = new ListView(this.features);
+        featuresListview = mainContainer.sidebar.features;
 
         currentActive = new ItemActiveHelper<ListViewItem>();
 
@@ -435,7 +443,7 @@ export const ui = new class {
         }
     };
     content = new class {
-        container = document.getElementById('content-outer')!;
+        container = mainContainer.contentOuter;
         current: views.ContentView | null = null;
         removeCurrent() {
             const cur = this.current;
@@ -443,21 +451,21 @@ export const ui = new class {
             if (!cur) return;
             cur.onRemove();
             if (cur.dom) {
-                this.container.removeChild(cur.dom);
+                this.container.removeView(cur);
                 cur.onDomRemoved();
             }
         }
-        setCurrent(arg: views.ContentView | null) {
-            if (arg === this.current) return;
+        setCurrent(view: views.ContentView | null) {
+            if (view === this.current) return;
             this.removeCurrent();
-            if (arg) {
-                arg.onShow();
-                if (arg.dom) {
-                    this.container.appendChild(arg.dom);
-                    arg.onDomInserted();
+            if (view) {
+                view.onShow();
+                if (view.dom) {
+                    this.container.appendView(view);
+                    view.onDomInserted();
                 }
             }
-            this.current = arg;
+            this.current = view;
         }
     };
     windowTitle = new class {
@@ -553,8 +561,8 @@ class ProgressButton extends View {
     constructor(dom?: BuildDomExpr) {
         super(dom ?? { tag: 'div.btn' });
         this.dom.classList.add('btn-progress');
-        this.dom.appendView(this.fill);
-        this.dom.appendView(this.textSpan);
+        this.appendView(this.fill);
+        this.appendView(this.textSpan);
     }
 }
 
@@ -583,7 +591,7 @@ class VolumeButton extends ProgressButton {
         });
         var startX: number;
         var startVol: number;
-        utils.listenPointerEvents(this.dom, (e) => {
+        listenPointerEvents(this.dom, (e) => {
             if (e.type === 'mouse' && e.action === 'down' && e.ev.buttons != 1) return;
             e.ev.preventDefault();
             if (e.action === 'down') {
@@ -647,7 +655,7 @@ class VolumeButton extends ProgressButton {
             this.progress = playerCore.volume;
         })();
         this.onChanging.add((x) => {
-            var r = utils.numLimit(x, 0, 1);
+            var r = numLimit(x, 0, 1);
             r = Math.round(r * 100) / 100;
             this.showUsage = false;
             playerCore.volume = r;

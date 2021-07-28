@@ -2,17 +2,17 @@
 
 import { TrackList, TrackListView, TrackViewItem } from "./TrackList";
 import { Track } from "./Track";
-import { Semaphore, utils, DataUpdatingHelper, CancelToken } from "./utils";
+import { Semaphore, DataUpdatingHelper, CancelToken } from "../Infra/utils";
 import { ListIndexViewItem } from "./ListIndex";
-import { user } from "./User";
-import { Api } from "./apidef";
-import { ListView, LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView, Ref } from "./viewlib";
-import { router } from "./Router";
-import { I, i18n } from "./I18n";
-import { playerCore } from "./PlayerCore";
-import { ui } from "./UI";
-import { api } from "./Api";
-import { ContentHeader } from "./ui-views";
+import { user } from "../API/User";
+import { Api } from "../API/apidef";
+import { LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView, Ref, buildDOM, formatFileSize, objectApply } from "../Infra/viewlib";
+import { router } from "../Infra/Router";
+import { I, i18n } from "../I18n/I18n";
+import { playerCore } from "../Player/PlayerCore";
+import { ui } from "../Infra/UI";
+import { api } from "../API/Api";
+import { ContentHeader } from "../Infra/ui-views";
 
 
 class UploadTrack extends Track {
@@ -46,7 +46,7 @@ export const uploads = new class extends TrackList {
     unreadError = false;
     private uploadSemaphore = new Semaphore({ maxCount: 2 });
     init() {
-        this.sidebarItem = new ListIndexViewItem({ text: I`My Uploads` });
+        this.sidebarItem = new ListIndexViewItem({ text: () => I`My Uploads` });
         router.addRoute({
             path: ['uploads'],
             sidebarItem: () => this.sidebarItem,
@@ -90,7 +90,7 @@ export const uploads = new class extends TrackList {
         usage = new TextView({ tag: 'span.uploads-usage' });
 
         protected appendHeader() {
-            this.title = I`My Uploads`;
+            this.title = () => I`My Uploads`;
             super.appendHeader();
             this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
             this.header.appendView(this.uploadArea);
@@ -132,9 +132,17 @@ export const uploads = new class extends TrackList {
             if (!uploads.state) uploads.fetch();
         }
         updateUsage() {
-            var total = 0;
-            uploads.tracks.forEach(x => total += x.size ?? 0);
-            this.usage.text = total ? `(${utils.formatFileSize(total)})` : '';
+            var original = 0;
+            var converted = 0;
+            uploads.tracks.forEach(x => {
+                x.files?.forEach(f => {
+                    if (!f.profile)
+                        original += f.size ?? 0;
+                    else
+                        converted += f.size ?? 0;
+                });
+            });
+            this.usage.text = original ? `(${formatFileSize(original)} + ${formatFileSize(converted)})` : '';
         }
         updateView() {
             super.updateView();
@@ -350,7 +358,7 @@ class UploadViewItem extends TrackViewItem {
     postCreateDom() {
         super.postCreateDom();
         this.dom.classList.add('uploads-item');
-        this.dom.appendChild(this.domstate = utils.buildDOM<HTMLElement>({ tag: 'span.uploads-state' }));
+        this.dom.appendChild(this.domstate = buildDOM<HTMLElement>({ tag: 'span.uploads-state' }));
     }
     updateDom() {
         super.updateDom();
@@ -373,15 +381,15 @@ class UploadArea extends View {
     private domfile = new Ref<HTMLInputElement>();
     constructor(init: Partial<UploadArea>) {
         super();
-        utils.objectApply(this, init);
+        objectApply(this, init);
     }
     createDom() {
         return {
             tag: 'div.upload-area.clickable',
             tabIndex: 0,
             child: [
-                { tag: 'div.text.no-selection', text: I`Click here to select files to upload` },
-                { tag: 'div.text.no-selection', text: I`or drag files to this zone...` },
+                { tag: 'div.text.no-selection', text: () => I`Click here to select files to upload` },
+                { tag: 'div.text.no-selection', text: () => I`or drag files to this zone...` },
                 {
                     tag: 'input', type: 'file', ref: this.domfile,
                     style: 'visibility: collapse; height: 0;',

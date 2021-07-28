@@ -1,11 +1,12 @@
-import { Dialog, ButtonView, View, LabeledInput } from "./viewlib";
-import { I, i18n, IA } from "./I18n";
-import { ui } from "./UI";
-import { playerCore } from "./PlayerCore";
-import { utils } from "./utils";
+import { Dialog, ButtonView, View, LabeledInput } from "../Infra/viewlib";
+import { I, i18n, IA } from "../I18n/I18n";
+import { ui } from "../Infra/UI";
+import { playerCore } from "../Player/PlayerCore";
+import { jsx } from "../Infra/utils";
 import { appVersion } from "./AppVersion";
 import buildInfo from "./buildInfo";
-import { playerFX } from "./PlayerFX";
+import { playerFX } from "../Player/PlayerFX";
+import { TextBtn } from "@yuuza/webfx";
 
 export const settingsUI = new class {
     dialog: SettingsDialog;
@@ -37,9 +38,6 @@ class SettingsDialog extends Dialog {
             var langs = ['', ...ui.lang.availableLangs];
             curlang = langs[(langs.indexOf(curlang) + 1) % langs.length];
             ui.lang.siLang.set(curlang);
-            if (origUsingLang != ui.lang.curLang)
-                this.showReload();
-            this.updateDom();
         });
         this.addContent(this.inputPreferBitrate);
         this.onShown.add(() => {
@@ -59,37 +57,18 @@ class SettingsDialog extends Dialog {
         });
         this.addContent(<ButtonView onActive={(e) => {
             playerFX.showUI(e);
-        }}>Test: Player FX</ButtonView>)
-        this.addContent(this.bottom);
-    }
-
-    bottom: View = new View(
-        <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
-            <div>{'MusicCloud ' + appVersion.currentVersion}</div>
-            <div style="color: var(--color-text-gray);">
-                <View args={[{ tag: 'div.clickable', tabIndex: 0 }]} onActive={(ev) => {
+        }}>Test: Player FX</ButtonView>);
+        this.addContent(
+            <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
+                <div>{'MusicCloud ' + appVersion.currentVersion}</div>
+                <TextBtn onActive={(ev) => {
                     new AboutDialog().show(ev);
                     this.close();
                 }}>
                     {() => I`About`}
-                </View>
-            </div>
-        </div>
-    );
-
-    reloadShown = false;
-    showReload() {
-        if (this.reloadShown) return;
-        this.reloadShown = true;
-        var reloadView = new View(
-            <div class="clickable" style='color: var(--color-primary); text-align: center; margin: 10px 0;' tabIndex="0">
-                {() => I`Reload to fully apply changes`}
+                </TextBtn>
             </div>
         );
-        reloadView.onActive.add(() => {
-            window.location.reload();
-        });
-        this.content.addView(reloadView, this.bottom.position);
     }
 
     updateDom() {
@@ -101,7 +80,6 @@ class SettingsDialog extends Dialog {
         if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
         this.inputPreferBitrate.updateWith({ label: I`Preferred bitrate (0: original file)` });
         this.btnNotification.text = ui.notification.config.enabled ? I`Disable notification` : I`Enable notification`;
-        this.content.updateChildrenDom();
     }
 }
 

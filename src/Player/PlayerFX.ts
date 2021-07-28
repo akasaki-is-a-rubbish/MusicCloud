@@ -1,4 +1,4 @@
-import { Dialog, Func, View } from "./viewlib";
+import { Dialog, Func, View } from "../Infra/viewlib";
 import { playerCore } from "./PlayerCore";
 
 export const playerFX = new class PlayerFX {
@@ -39,6 +39,7 @@ class FXDialog extends Dialog {
         super();
         this.width = '830px';
         this.addContent(this.canvas);
+        this.overlay.setFlags({ clickThrough: true });
     }
     postCreateDom() {
         super.postCreateDom();

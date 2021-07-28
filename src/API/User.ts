@@ -1,17 +1,17 @@
 // file: User.ts
 
-import { SettingItem, Callbacks, Action, TextCompositionWatcher, utils } from "./utils";
-import { I } from "./I18n";
-import { listIndex } from "./ListIndex";
-import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView, Toast } from "./viewlib";
+import { SettingItem, Callbacks, Action, TextCompositionWatcher } from "../Infra/utils";
+import { I } from "../I18n/I18n";
+import { listIndex } from "../Track/ListIndex";
+import { Dialog, View, TextBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply } from "../Infra/viewlib";
 import { Api } from "./apidef";
-import { ui } from "./UI";
+import { ui } from "../Infra/UI";
 import { api } from "./Api";
-import { playerCore } from "./PlayerCore";
-import { uploads } from "./Uploads";
-import { TrackList } from "./TrackList";
-import { Track } from "./Track";
-import { settingsUI } from "./SettingsUI";
+import { playerCore } from "../Player/PlayerCore";
+import { uploads } from "../Track/Uploads";
+import { TrackList } from "../Track/TrackList";
+import { Track } from "../Track/Track";
+import { settingsUI } from "../Settings/SettingsUI";
 
 export const user = new class User {
     siLogin = new SettingItem('mcloud-login', 'json', {
@@ -64,7 +64,7 @@ export const user = new class User {
         this.loginDialog?.close();
     }
     getBasicAuth(info: Api.UserInfo) {
-        return 'Basic ' + utils.base64EncodeUtf8(info.username + ':' + info.passwd);
+        return 'Basic ' + base64EncodeUtf8(info.username + ':' + info.passwd);
     }
     getBearerAuth(token: string) {
         return 'Bearer ' + token;
@@ -159,7 +159,7 @@ export const user = new class User {
                 return;
             }
         }
-        utils.objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined });
+        objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined });
         this.role = undefined;
         this.siLogin.save();
         api.defaultAuth = null;
@@ -275,8 +275,8 @@ export const user = new class User {
 };
 
 class LoginDialog extends Dialog {
-    tabLogin = new TabBtn({ text: I`Login`, active: true });
-    tabCreate = new TabBtn({ text: I`Create account` });
+    tabLogin = new TextBtn({ text: I`Login`, active: true });
+    tabCreate = new TextBtn({ text: I`Create account` });
     inputUser = new LabeledInput({ label: I`Username` });
     inputPasswd = new LabeledInput({ label: I`Password`, type: 'password' });
     inputPasswd2 = new LabeledInput({ label: I`Confirm password`, type: 'password' });
@@ -294,7 +294,7 @@ class LoginDialog extends Dialog {
         });
 
         [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => dig.addContent(x));
-        dig.addContent(utils.buildDOM({
+        dig.addContent(buildDOM({
             tag: 'div',
             child: [this.viewStatus, this.btn]
         }) as any);
@@ -309,7 +309,7 @@ class LoginDialog extends Dialog {
         this.btn.toggleClass('bigbtn', true);
         this.btn.dom.addEventListener('click', () => this.btnClicked());
 
-        var toggle = (btn: TabBtn) => {
+        var toggle = (btn: TextBtn) => {
             if (btn.active) return;
             this.isRegistering = !this.isRegistering;
             this.inputPasswd2.hidden = !this.isRegistering;
@@ -319,7 +319,7 @@ class LoginDialog extends Dialog {
         };
         this.inputPasswd2.hidden = true;
 
-        this.addBtn(new TabBtn({
+        this.addBtn(new TextBtn({
             text: I`Settings`, right: true,
             onActive: (ev) => {
                 settingsUI.openUI(ev);
@@ -398,7 +398,7 @@ class MeDialog extends Dialog {
             user.logout();
             this.close();
         });
-        this.addBtn(new TabBtn({
+        this.addBtn(new TextBtn({
             text: I`Settings`, right: true,
             onActive: (ev) => {
                 settingsUI.openUI(ev);
