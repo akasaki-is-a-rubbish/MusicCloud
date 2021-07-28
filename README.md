@@ -1,6 +1,8 @@
 # MusicCloud
 
-MusicCloud is a music website built with [webfx](https://github.com/lideming/webfx).
+![](./resources/playing.jpg)
+
+MusicCloud is a music software built with [webfx](https://github.com/lideming/webfx).
 
 This repo contains the frontend parts of MusicCloud.
 
