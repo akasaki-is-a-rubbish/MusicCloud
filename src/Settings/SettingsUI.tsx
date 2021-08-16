@@ -28,7 +28,8 @@ class SettingsDialog extends Dialog {
         super();
         this.addContent(this.btnSwitchTheme);
         this.btnSwitchTheme.onActive.add(() => {
-            ui.theme.set((ui.theme.current === 'light') ? 'dark' : 'light');
+            const idx = (ui.theme.all.indexOf(ui.theme.current) + 1) % ui.theme.all.length;
+            ui.theme.set(ui.theme.all[idx]);
             this.updateDom();
         });
         this.addContent(this.btnSwitchLang);
@@ -55,12 +56,21 @@ class SettingsDialog extends Dialog {
             ui.notification.setEnable(!ui.notification.config.enabled)
                 .then(() => this.updateDom());
         });
-        this.addContent(<ButtonView onActive={(e) => {
-            playerFX.showUI(e);
-        }}>Test: Player FX</ButtonView>);
+        const devFeatures = new View(<div>
+            <ButtonView onActive={(e) => {
+                playerFX.showUI(e);
+            }}>Test: Player FX</ButtonView>
+        </div>);
+        devFeatures.hidden = true;
+        let devClickCount = 0;
+        this.addContent(devFeatures);
         this.addContent(
             <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
-                <div>{'MusicCloud ' + appVersion.currentVersion}</div>
+                <div onclick={() => {
+                    if (++devClickCount == 5) {
+                        devFeatures.hidden = false;
+                    }
+                }}>{'MusicCloud ' + appVersion.currentVersion}</div>
                 <TextBtn onActive={(ev) => {
                     new AboutDialog().show(ev);
                     this.close();
@@ -75,7 +85,7 @@ class SettingsDialog extends Dialog {
         this.title = I`Settings`;
         this.btnClose.updateWith({ text: I`Close` });
         super.updateDom();
-        this.btnSwitchTheme.text = I`Color theme: ${i18n.get('colortheme_' + ui.theme.current)}`;
+        this.btnSwitchTheme.text = I`UI theme: ${i18n.get('colortheme_' + ui.theme.current)}`;
         this.btnSwitchLang.text = I`Language: ${I`English`}`;
         if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
         this.inputPreferBitrate.updateWith({ label: I`Preferred bitrate (0: original file)` });
