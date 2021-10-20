@@ -90,6 +90,11 @@ export const ui = new class {
                 document.body.classList.remove('keyboard-input');
             }, { passive: true, capture: true })
         );
+        window.addEventListener('message', (e) => {
+            if (e.data['theme']) {
+                ui.theme.set(e.data['theme']);
+            }
+        });
     }
     addErrorListener() {
         window.addEventListener("error", (e) => {
