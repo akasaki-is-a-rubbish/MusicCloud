@@ -31,6 +31,7 @@ import { Track } from "../Track/Track";
 import { user } from "../API/User";
 import { playerCore, playingLoopModes } from "../Player/PlayerCore";
 import { uploads } from "../Track/Uploads";
+import { api } from "../API/Api";
 
 export const ui = new class {
     usingKeyboardInput = false;
@@ -38,6 +39,7 @@ export const ui = new class {
         this.addErrorListener();
         this.lang.init();
         this.sidebar.init();
+        this.contentBg.init();
         this.bottomBar.init();
         this.trackinfo.init();
         this.playerControl.init();
@@ -222,6 +224,7 @@ export const ui = new class {
         btnPrev = new View(document.getElementById('btn-prevtrack')!);
         btnNext = new View(document.getElementById('btn-nexttrack')!);
         btnVolume: VolumeButton;
+        canvasLoudness: View<HTMLCanvasElement> | null = null;
 
         state: typeof playerCore['state'];
 
@@ -241,7 +244,10 @@ export const ui = new class {
             this.btnPrev.onActive.add((e) => { e.preventDefault(); playerCore.prev(); });
             this.btnNext.onActive.add((e) => { e.preventDefault(); playerCore.next(); });
             playerCore.onLoopModeChanged.add(() => this.updateLoopMode())();
-            playerCore.onTrackChanged.add(() => this.updateLoopMode())();
+            playerCore.onTrackChanged.add(() => {
+                this.updateLoopMode();
+                this.updateLoudnessMap();
+            })();
             playerCore.onStateChanged.add(() => {
                 this.setState(playerCore.state);
                 this.setProg(playerCore.currentTime, playerCore.duration);
@@ -283,6 +289,77 @@ export const ui = new class {
             this.btnLoop.text = i18n.get('loopmode_' + playerCore.loopMode);
             this.btnNext.toggleClass('disabled', !playerCore.getNextTrack(1));
             this.btnPrev.toggleClass('disabled', !playerCore.getNextTrack(-1));
+        }
+        async updateLoudnessMap() {
+            const track = playerCore.track;
+            var louds = await track?._loudmap;
+            if (track && !louds) {
+                if (this.canvasLoudness) {
+                    const ctx = this.canvasLoudness.dom.getContext('2d')!;
+                    const { width, height } = this.canvasLoudness.dom;
+                    ctx.clearRect(0, 0, width, height);
+                }
+                track._loudmap = (async () => {
+                    var resp = await api.get(`tracks/${track.id}/loudnessmap`) as Response;
+                    if (!resp.ok) return null;
+                    var ab = await resp.arrayBuffer();
+                    return track._loudmap = new Uint8Array(ab);
+                })();
+                louds = await track._loudmap;
+            }
+            if (playerCore.track !== track) return;
+            if (louds && louds.length > 20) {
+                const [width, height] = [Math.min(1024, louds.length / 4), 32];
+                if (!this.canvasLoudness) {
+                    this.canvasLoudness = new View({ tag: 'canvas.loudness', width, height });
+                    bottomBar.progressBar.appendView(this.canvasLoudness);
+                }
+                this.canvasLoudness.dom.width = width;
+                const scale = louds.length / width;
+                const scaleY = height / 256 * (256 / Math.log(256));
+                const ctx = this.canvasLoudness.dom.getContext('2d')!;
+                ctx.clearRect(0, 0, width, height);
+                ctx.beginPath();
+                const peakAvgs: number[] = [];
+                for (let i = 0; i < width; i += 1) {
+                    const begin = Math.floor(i * scale);
+                    const end = Math.floor(i * scale + scale);
+                    let sum = 0;
+                    for (let i = begin; i < end; i++) {
+                        sum += louds[i];
+                    }
+                    peakAvgs.push(sum / scale);
+                }
+
+                // scale after log()
+                const tmp = [...peakAvgs].filter(x => x > 0).sort((a, b) => a - b);
+                const low = Math.log(tmp[Math.floor(tmp.length * 0.01)]) * scaleY;
+                const high = Math.log(tmp[Math.floor(tmp.length * 0.99)]) * scaleY;
+                const scaleY2 = height * (0.95 - 0.2) / (high - low);
+                const offsetY2 = (height * 0.2) - (low * scaleY2);
+
+                ctx.moveTo(-1, height);
+                for (let i = 0; i < width; i++) {
+                    let y = peakAvgs[i];
+                    if (y <= 0) y = 0;
+                    else {
+                        y = Math.log(y);
+                        y = y * scaleY;
+                        y *= scaleY2;
+                        y += offsetY2;
+                    }
+                    ctx.lineTo(i, height - y);
+                    ctx.lineTo(i + 1, height - y);
+                }
+                ctx.lineTo(width, height);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+            } else {
+                if (this.canvasLoudness) {
+                    bottomBar.progressBar.removeView(this.canvasLoudness);
+                    this.canvasLoudness = null;
+                }
+            }
         }
         onProgressSeeking(cb: (percent: number) => void) {
             var call = (offsetX) => { cb(numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
@@ -413,8 +490,12 @@ export const ui = new class {
     };
     sidebarLogin = new class {
         container = mainContainer.sidebar.header;
-        loginState = new views.SidebarItem();
+        loginState = new View({ tag: 'div.item.no-selection', tabIndex: 0 });
+        loginName = new TextView({ tag: 'span.user-name' });
+        loginAvatar = new View({ tag: 'img.user-avatar' });
         init() {
+            this.loginState.addView(this.loginAvatar, 0);
+            this.loginState.addView(this.loginName, 1);
             this.container.addView(this.loginState, 0);
             this.loginState.dom.id = 'login-state';
             this.loginState.onActive.add((ev) => {
@@ -422,8 +503,9 @@ export const ui = new class {
             });
         }
         update() {
-            var text = this.loginState.text;
+            var text = this.loginName.text;
             var username = user.pendingInfo?.username ?? user.info.username;
+            var avatar = api.processUrl(user.info?.avatar) ?? '';
             if (username) {
                 text = username;
                 if (user.state === 'logging') text += I` (logging in...)`;
@@ -433,7 +515,9 @@ export const ui = new class {
                 if (user.state === 'logging') text = I`(logging...)`;
                 else text = I`Guest (click to login)`;
             }
-            this.loginState.updateWith({ text });
+            this.loginName.text = text;
+            this.loginAvatar.hidden = !avatar;
+            (this.loginAvatar.dom as HTMLImageElement).src = avatar;
         }
     };
     sidebarList = new class {
@@ -457,23 +541,58 @@ export const ui = new class {
             const cur = this.current;
             this.current = null;
             if (!cur) return;
-            cur.onRemove();
-            if (cur.dom) {
-                this.container.removeView(cur);
-                cur.onDomRemoved();
-            }
+            cur.fadeOut();
         }
         setCurrent(view: views.ContentView | null) {
             if (view === this.current) return;
+            this.container.toggleClass('content-animation-reverse', router.wasBacked);
             this.removeCurrent();
             if (view) {
-                view.onShow();
-                if (view.dom) {
+                if (!view.parentView) {
+                    view.onShow();
                     this.container.appendView(view);
                     view.onDomInserted();
                 }
+                view.fadeIn();
             }
             this.current = view;
+        }
+    };
+    contentBg = new class {
+        bgView: View | null = null;
+        imgView: View | null = null;
+        curImg = '';
+        init() {
+            playerCore.onTrackChanged.add(() => this.update());
+            api.onTrackInfoChanged.add((t) => t.id === playerCore.track?.id && this.update());
+            this.bgView = new View({ tag: 'div.content-bg' });
+            ui.content.container.addView(this.bgView, 0);
+        }
+
+        update() {
+            const newTrack = playerCore.track;
+            if (newTrack?.thumburl) {
+                const url = 'url(' + api.processUrl(newTrack.thumburl) + ')';
+                if (this.curImg != url) {
+                    const newView = new View({ tag: 'div.content-bg-img', style: { backgroundImage: url } });
+                    this.bgView!.addView(newView, 0);
+                    this.fadeoutCurrent();
+                    this.imgView = newView;
+                    this.curImg = url;
+                }
+            } else {
+                this.fadeoutCurrent();
+            }
+        }
+
+        fadeoutCurrent() {
+            const oldbg = this.imgView;
+            if (oldbg) {
+                fadeout(oldbg.dom, { remove: false }).onFinished(() => {
+                    oldbg!.removeFromParent();
+                });
+                this.curImg = '';
+            }
         }
     };
     windowTitle = new class {
@@ -528,7 +647,8 @@ export const ui = new class {
                     const track = playerCore.track!;
                     this.show(track.name, {
                         body: I`Artist` + ': ' + track?.artist,
-                        requireInteraction: false
+                        requireInteraction: false,
+                        image: !track?.picurl ? undefined : api.processUrl(track.picurl)
                     });
                 }
             });

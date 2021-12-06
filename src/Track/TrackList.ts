@@ -2,7 +2,7 @@
 
 import { BuildDomExpr, DataUpdatingHelper } from "../Infra/utils";
 import { I, i18n } from "../I18n/I18n";
-import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, formatTime, mod, objectApply, sleepAsync } from "../Infra/viewlib";
+import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, formatTime, mod, objectApply, sleepAsync, toggleClass } from "../Infra/viewlib";
 import { ListContentView } from "../Infra/ListContentView";
 import { user } from "../API/User";
 import { Api } from "../API/apidef";
@@ -231,7 +231,7 @@ export class TrackList {
             }
             var suffled = this.tracksSuffled;
             position = suffled.indexOf(track);
-            if (!position || position < 0) position = suffled.findIndex(x => x.id === track.id)
+            if (!position || position < 0) position = suffled.findIndex(x => x.id === track.id);
             return suffled[mod(position + offset, suffled.length)] ?? null;
         } else if (loopMode === 'track-loop') {
             return track;
@@ -319,10 +319,14 @@ export class TrackListView extends ListContentView {
         super.onRemove();
     }
     onSidebarItemReactived() {
-        this.curPlaying.current?.dom.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
+        const current = this.curPlaying.current;
+        if (current) {
+            this.scrollBox.dom.scrollTo({
+                top: current.dom.offsetTop + current.dom.offsetHeight / 2
+                    - this.scrollBox.dom.clientHeight / 2,
+                behavior: 'smooth',
+            });
+        }
     }
     protected appendListView() {
         super.appendListView();
@@ -396,16 +400,37 @@ export class TrackViewItem extends ListViewItem {
             tabIndex: 0,
             child: [
                 {
-                    tag: 'span.pos', update: (dompos) => {
-                        if (this.playing) {
-                            clearChildren(dompos);
-                            dompos.appendChild(new Icon({icon: svgPlayArrow}).dom);
-                        } else if (!this.noPos) {
-                            dompos.textContent = this.track._bind?.position != null
-                                ? (this.track._bind.position + 1).toString() : '';
+                    tag: 'div.picbox',
+                    child: [
+                        {
+                            tag: 'img.pic',
+                            loading: 'lazy',
+                            height: 128,
+                            width: 128,
+                            update: (dompic: HTMLImageElement) => {
+                                let bg = '';
+                                if (this.track.thumburl) {
+                                    bg = api.processUrl(this.track.thumburl) ?? '';
+                                }
+                                if (bg != dompic.src) dompic.src = bg;
+                                toggleClass(dompic, "nopic", !bg);
+                            },
+                        },
+                        {
+                            tag: 'span.pos',
+                            update: (dompos) => {
+                                if (this.playing) {
+                                    clearChildren(dompos);
+                                    dompos.appendChild(new Icon({ icon: svgPlayArrow }).dom);
+                                } else if (!this.noPos) {
+                                    dompos.textContent = this.track._bind?.position != null
+                                        ? (this.track._bind.position + 1).toString() : '';
+                                }
+                                toggleClass(dompos, "withpic", !!this.track.thumburl);
+                                dompos.hidden = this.noPos && !this.playing;
+                            }
                         }
-                        dompos.hidden = this.noPos && !this.playing;
-                    }
+                    ]
                 },
                 { tag: 'span.name', text: () => this.track.name },
                 { tag: 'span.artist', text: () => this.track.artist },
@@ -456,6 +481,12 @@ export class TrackViewItem extends ListViewItem {
                         }
                     }));
                 });
+            }
+            if (this.track.picurl) {
+                m.add(new MenuLinkItem({
+                    text: I`Show picture`,
+                    link: api.processUrl(this.track.picurl),
+                }));
             }
         }
         if (this.track.canEdit) [0, 1].forEach(visi => {

@@ -121,14 +121,14 @@ export class ListIndex {
             onActive: () => {
                 this.newTracklist();
             }
-        }, [ icon ])));
+        }, [icon])));
         ui.sidebarList.container.appendView(this.section);
         ui.sidebar.dom.addEventListener('scroll', (ev) => {
             if (ev.eventPhase === Event.AT_TARGET) {
                 var dom = this.section.headerView.dom;
                 setScrollableShadow(dom, dom.offsetTop + dom.offsetHeight - this.listView.dom.offsetTop);
             }
-        });
+        }, { passive: true });
         this.listView.scrollBox = ui.sidebar.dom;
         router.addRoute({
             path: ['list'],
@@ -154,7 +154,7 @@ export class ListIndex {
             onNav: async (arg) => {
                 if (await user.waitLogin(false)) {
                     if (this.listView.length > 0)
-                        router.nav(['list', this.listView.get(0).listInfo.id.toString()], false);
+                        router.nav(['list', this.listView.get(0).listInfo.id.toString()], { pushState: false });
                 }
             }
         });
@@ -286,7 +286,7 @@ export class ListIndexViewItem extends SidebarItem {
         var domtag = this.getDomById('tag')!;
         var tagText = (!this.listInfo || this.listInfo.visibility == 0) ? "" :
             (this.listInfo.owner == user.id && this.listInfo.visibility == 1) ? I`my_visibility_1` :
-                I`visibility_1`;
+                this.listInfo.ownerName;
         domtag.textContent = tagText;
         domtag.style.display = tagText ? 'block' : 'none';
         this.dom.style.paddingTop = tagText ? '.3em' : '';

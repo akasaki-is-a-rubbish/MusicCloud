@@ -9,10 +9,14 @@ import svgPrev from "../../resources/skip_previous-24px.svg";
 import svgNext from "../../resources/skip_next-24px.svg";
 import { settingsUI } from "../Settings/SettingsUI";
 import { ui } from "./UI";
+import { fadeout, FadeoutResult } from "@yuuza/webfx";
 
 export class MainContainer extends View {
     sidebar = new Sidebar();
-    contentOuter = new View(<main id="content-outer"></main>);
+    contentOuter = new View(
+        <main id="content-outer">
+        </main>
+    );
     createDom() {
         return (
             <div id="main-container" class="no-transition">
@@ -24,7 +28,12 @@ export class MainContainer extends View {
 }
 
 export class Sidebar extends View {
-    header = new View(<div id="sidebar-header"><SettingsBtn /></div>);
+    header = new View(
+        <div id="sidebar-header">
+            {new View(<div style="flex: 1"></div>)}
+            <SettingsBtn />
+        </div>
+    );
     features = new ListView(<div id="sidebar-features"></div>);
     list = new View(<div id="sidebar-list"></div>);
     createDom() {
@@ -42,6 +51,11 @@ export class BottomBar extends View {
     btnPlay = new Ref<HTMLElement>();
     btnPrev = new Ref<HTMLElement>();
     btnNext = new Ref<HTMLElement>();
+    progressBar = new View(
+        <div class="btn-progress" id="progressbar">
+            <div class="btn-fill" id="progressbar-fill"></div>
+        </div>
+    );
     createDom() {
         return (
             <div id="bottombar">
@@ -49,9 +63,7 @@ export class BottomBar extends View {
                     <div class="no-selection" id="progressbar-label-cur">--:--</div>
                     <div class="no-selection" id="progressbar-label-total">--:--</div>
                 </div>
-                <div class="btn-progress" id="progressbar">
-                    <div class="btn-fill" id="progressbar-fill"></div>
-                </div>
+                {this.progressBar}
                 <div id="playcontrol">
                     <div id="btn-prevtrack" class="prev_n_next clickable" tabindex="0" ref={this.btnPrev}><Icon icon={svgPrev} /></div>
                     <div id="btn-play" class="clickable" tabindex="0" ref={this.btnPlay}></div>
@@ -98,7 +110,7 @@ export class SidebarItem extends ListViewItem {
 export class SettingsBtn extends View {
     createDom() {
         return (
-            <div class="item" id="settings-btn">
+            <div class="item" id="settings-btn" tabIndex="0">
                 <Icon icon={svgSettings} />
             </div>
         );
@@ -117,6 +129,10 @@ export class ContentView extends View {
 
     _lastRenderedLanguage = '';
 
+    postCreateDom() {
+        super.postCreateDom();
+        this.toggleClass('contentview', true);
+    }
     onShow() {
         this._isVisible = true;
         if (this.domCreated && this._lastRenderedLanguage != ui.lang.curLang) {
@@ -134,6 +150,19 @@ export class ContentView extends View {
     }
     onDomRemoved() { }
     onSidebarItemReactived() { }
+
+    fadeIn() {
+        this._fadeout?.cancel();
+    }
+
+    _fadeout: FadeoutResult | null = null;
+    fadeOut() {
+        this._fadeout = fadeout(this.dom, { remove: false }).onFinished(() => {
+            this.onRemove();
+            this.removeFromParent();
+            this.onDomRemoved();
+        });
+    }
 
     _shownEvents: EventRegistrations | null = null;
     get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new EventRegistrations()); }
@@ -180,7 +209,7 @@ export class ContentHeader extends View {
             if (ev.eventPhase == Event.AT_TARGET) {
                 this.onScrollboxScroll();
             }
-        });
+        }, { passive: true });
     }
     onScrollboxScroll() {
         setScrollableShadow(this.dom, this.scrollbox?.scrollTop ?? 0);

@@ -22,13 +22,13 @@ export const nowPlaying = new class {
         router.addRoute({
             path: ['tracks'],
             onNav: (arg) => {
-                router.nav(['track', ...arg.remaining], 'replace');
+                router.nav(['track', ...arg.remaining], { pushState: 'replace' });
             }
         });
         router.addRoute({
             path: ['track'],
             onNav: (arg) => {
-                router.nav(['nowplaying'], false);
+                router.nav(['nowplaying'], { pushState: false });
                 if (arg.remaining[0] != playerCore.track?.id as any) { // compare string to number
                     api.get('tracks/' + arg.remaining[0]).then((t: Api.Track) => {
                         playerCore.setTrack(new Track({ infoObj: t }));
@@ -63,7 +63,16 @@ class PlayingView extends ContentView {
     });
     lyricsView = new LyricsView();
     loading = new LoadingIndicator();
-    loadingOuter = new View({ tag: 'div', style: 'flex: 1; align-items: center;', child: this.loading });
+    loadingOuter = new View({
+        tag: 'div',
+        child: this.loading,
+        style: {
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+        },
+    });
     viewToggle = new ViewToggle({
         container: this,
         items: {
@@ -79,6 +88,7 @@ class PlayingView extends ContentView {
     constructor() {
         super();
         this.header.lines = this.lyricsView.lines;
+        this.header.dom.style.background = 'none';
         this.lyricsView.scale = this.si.data.lyricsScale;
         this.lyricsView.onFontSizeChanged.add(() => {
             this.si.data.lyricsScale = this.lyricsView.scale;
@@ -104,12 +114,6 @@ class PlayingView extends ContentView {
             tag: 'div.playingview',
             child: [
                 this.header,
-                // {
-                //     tag: 'div.pic',
-                //     child: [
-                //         { tag: 'div.nopic.no-selection', text: () => I`No album cover` }
-                //     ]
-                // },
                 this.lyricsView
             ]
         };

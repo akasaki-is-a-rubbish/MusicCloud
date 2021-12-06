@@ -11,7 +11,9 @@ export namespace Api {
     interface TrackListInfo {
         id: number;
         owner: number;
+        ownerName?: string;
         name: string;
+        picurl?: string;
         visibility: number;
         version: number;
     }
@@ -50,6 +52,8 @@ export namespace Api {
         albumArtist?: string;
         /** URL to audio file */
         url: string;
+        picurl?: string;
+        thumburl?: string;
         lyrics?: string;
         size?: number;
         length?: number;
@@ -93,6 +97,8 @@ export namespace Api {
         id?: number;
         /** When GET */
         lists?: TrackListInfo[];
+        /** When GET */
+        avatar?: string;
 
         /** When PUT */
         listids?: number[];
@@ -109,7 +115,7 @@ export namespace Api {
         /** When GET me */
         serverOptions?: ServerOptions;
 
-        /** When GET me/login */
+        /** When POST me/login */
         token?: string;
     }
 
