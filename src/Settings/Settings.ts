@@ -1,10 +1,14 @@
 export const settings = {
-    // apiBaseUrl: 'api/',
-    apiBaseUrl: 'https://mc.yuuza.net/api/',
-    // apiBaseUrl: 'http://127.0.0.1:5000/api/',
+    defaultApiBaseUrl: 'https://mc.yuuza.net/api/',
+    apiBaseUrl: '',
     debug: true,
     apiDebugDelay: 0,
-    showDownloadOptions: false,
-    showDiscussion: false,
-    showNotes: false,
+    showDownloadOptions: true,
+    showDiscussion: true,
+    showNotes: true,
+
+    init() {
+        var server = localStorage.getItem('mcloud-server');
+        this.apiBaseUrl = server || this.defaultApiBaseUrl;
+    }
 };

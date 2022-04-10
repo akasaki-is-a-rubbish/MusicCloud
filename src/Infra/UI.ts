@@ -315,13 +315,14 @@ export const ui = new class {
                     bottomBar.progressBar.appendView(this.canvasLoudness);
                 }
                 this.canvasLoudness.dom.width = width;
-                const scale = louds.length / width;
+                const smoothWindow = 2;
+                const scale = louds.length / (width + (smoothWindow - 1));
                 const scaleY = height / 256 * (256 / Math.log(256));
                 const ctx = this.canvasLoudness.dom.getContext('2d')!;
                 ctx.clearRect(0, 0, width, height);
                 ctx.beginPath();
-                const peakAvgs: number[] = [];
-                for (let i = 0; i < width; i += 1) {
+                let peakAvgs: number[] = [];
+                for (let i = 0; i < width + (smoothWindow - 1); i += 1) {
                     const begin = Math.floor(i * scale);
                     const end = Math.floor(i * scale + scale);
                     let sum = 0;
@@ -331,9 +332,11 @@ export const ui = new class {
                     peakAvgs.push(sum / scale);
                 }
 
+                peakAvgs = this.smooth(peakAvgs);
+
                 // scale after log()
                 const tmp = [...peakAvgs].filter(x => x > 0).sort((a, b) => a - b);
-                const low = Math.log(tmp[Math.floor(tmp.length * 0.01)]) * scaleY;
+                const low = Math.log(tmp[Math.floor(tmp.length * 0.02)]) * scaleY;
                 const high = Math.log(tmp[Math.floor(tmp.length * 0.99)]) * scaleY;
                 const scaleY2 = height * (0.95 - 0.2) / (high - low);
                 const offsetY2 = (height * 0.2) - (low * scaleY2);
@@ -360,6 +363,18 @@ export const ui = new class {
                     this.canvasLoudness = null;
                 }
             }
+        }
+        private smooth(arr: number[]) {
+            var val = arr[0];
+            var r: number[] = [];
+            for (let i = 1; i < arr.length; i++) {
+                var cur = arr[i];
+                val += (cur - val) * 0.25;
+                if (Math.abs(val) < 1) val = 0;
+                r.push(val);
+            }
+            console.info({arr, r});
+            return r;
         }
         onProgressSeeking(cb: (percent: number) => void) {
             var call = (offsetX) => { cb(numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
@@ -408,18 +423,25 @@ export const ui = new class {
     };
     sidebar = new class {
         dom = document.getElementById('sidebar')!;
+        header = mainContainer.sidebar.header;
         btn: SidebarToggle;
         overlay: Overlay | null;
+
         private _float = false;
         get float() { return this._float; }
+
         private _hide = false;
         private _hideMobile = true;
         private _hideLarge = false;
         get hide() { return this._hide && this._float; }
+
         private _btnShown = false;
         get btnShown() { return this._btnShown; }
+
         private _isMobile = false;
+
         init() {
+            this.initPanHandler();
             this.toggleBtn(true);
             this.checkWidth();
             window.addEventListener('resize', () => this.checkWidth());
@@ -434,6 +456,57 @@ export const ui = new class {
             });
             this.dom.addEventListener('dragover', () => this.toggleHide(false));
         }
+
+
+        private _panxHandler: TouchPanListener = null!;
+        private _leftPadding = 200;
+        private _getWidth() { return this.dom.offsetWidth - 200; }
+        private _movingPos: number | null = null;
+        private get movingPos() { return this._movingPos; }
+        private set movingPos(pos: number | null) {
+            this._movingPos = pos;
+            const width = this._getWidth();
+            if (pos != null) pos = numSoftLimit(pos, -width, 0, 0.15);
+            const ratio = 1 + pos! / width;
+            this.overlay!.dom.style.opacity = pos == null ? '' : `${ratio}`;
+            this.overlay!.dom.style.transition = pos == null ? 'opacity .3s' : 'none';
+            this.dom.style.transform = pos == null ? '' : `translate(${pos}px, 0)`;
+            this.dom.style.transition = pos == null ? '' : 'none';
+            ui.content.container.dom.style.transition = pos == null ? '' : 'none';
+            ui.content.container.dom.style.transform = pos == null ? '' : `translate(${30 * ratio}%, 0)`;
+            this.dom.style.boxShadow = pos == null ? '' : `0 0 ${numLimit((width + pos) / 5, 0, 20)}px var(--color-shadow)`;
+            if (pos != null && pos > 0) {
+                this.btn.dom.style.transform = `translate(${pos}px, 0)`;
+                this.btn.dom.style.transition = 'none';
+            } else {
+                this.btn.dom.style.transform = '';
+                this.btn.dom.style.transition = '';
+            }
+        }
+
+        initPanHandler() {
+            this._panxHandler = new TouchPanListener(mainContainer.dom, 'x');
+            this._panxHandler.filter = (e) => {
+                return this.dom.contains(e.target as Node)
+                    || this.overlay?.dom.contains(e.target as Node)
+                    || ui.content.container.dom.contains(e.target as Node);
+            };
+            this._panxHandler.onStart.add(() => {
+                this.toggleHide(false);
+                this.movingPos = this.dom.getBoundingClientRect().left + this._leftPadding;
+            });
+            var lastDelta = 0;
+            this._panxHandler.onMove.add(({ deltaX }) => {
+                lastDelta = deltaX;
+                this.movingPos! += deltaX;
+            });
+            this._panxHandler.onEnd.add(() => {
+                var hide = this.movingPos! + lastDelta * 10 < -this._getWidth() / 2;
+                this.movingPos = null;
+                this.toggleHide(hide);
+            });
+        }
+
         isMobile() {
             var width = window.innerWidth;
             return width < 800;
@@ -445,9 +518,10 @@ export const ui = new class {
                 this.toggleHide(mobile ? (this._hideMobile || this._hideLarge) : (this._hideLarge && this._hideMobile));
             }
         }
-        toggleFloat(float?) {
+        toggleFloat(float?: boolean) {
             if (float !== undefined && !!float === this._float) return;
             this._float = toggleClass(document.body, 'float-sidebar', float);
+            this._panxHandler.enabled = this._float;
             this.updateOverlay();
         }
         toggleBtn(show: boolean) {
@@ -466,6 +540,7 @@ export const ui = new class {
             if (this.isMobile()) this._hideMobile = this._hide;
             else this._hideLarge = this._hide;
             this.toggleFloat(this.isMobile() || this._hide);
+            ui.content.container.toggleClass('sidebar-shown', !this._hide);
             this.updateOverlay();
         }
         updateOverlay() {
@@ -473,14 +548,18 @@ export const ui = new class {
             if (showOverlay != !!this.overlay) {
                 if (showOverlay) {
                     this.overlay = new Overlay({
-                        tag: 'div.overlay', style: 'z-index: 99;',
+                        tag: 'div.overlay', style: 'z-index: 99; animation: none; transition: opacity .3s;',
                         onclick: () => this.toggleHide(true),
                         ondragover: () => this.toggleHide(true)
                     });
+                    this.overlay.dom.style.opacity = '0';
                     mainContainer.appendView(this.overlay);
+                    this.overlay.dom.offsetLeft;
+                    this.overlay.dom.style.opacity = '1';
                 } else {
                     const overlay = this.overlay!;
                     this.overlay = null;
+                    overlay.dom.style.opacity = '0';
                     fadeout(overlay.dom).onFinished(() => {
                         mainContainer.removeView(overlay);
                     });
@@ -561,17 +640,29 @@ export const ui = new class {
     contentBg = new class {
         bgView: View | null = null;
         imgView: View | null = null;
+        videoView: View | null = null;
         curImg = '';
         init() {
             playerCore.onTrackChanged.add(() => this.update());
+            playerCore.onAudioCreated.add(() => {
+                this.videoView = new View(playerCore.audio);
+                this.bgView!.addView(this.videoView);
+            });
+            playerCore.onStateChanged.add(() => {
+                this.bgView!.toggleClass('has-video', playerCore.track?.infoObj?.type === 'video');
+            });
             api.onTrackInfoChanged.add((t) => t.id === playerCore.track?.id && this.update());
             this.bgView = new View({ tag: 'div.content-bg' });
             ui.content.container.addView(this.bgView, 0);
         }
 
+        toggleFullVideo(full: boolean) {
+            this.bgView!.toggleClass('full-video', full);
+        }
+
         update() {
             const newTrack = playerCore.track;
-            if (newTrack?.thumburl) {
+            if (newTrack?.thumburl && newTrack.type != 'video') {
                 const url = 'url(' + api.processUrl(newTrack.thumburl) + ')';
                 if (this.curImg != url) {
                     const newView = new View({ tag: 'div.content-bg-img', style: { backgroundImage: url } });
@@ -648,7 +739,8 @@ export const ui = new class {
                     this.show(track.name, {
                         body: I`Artist` + ': ' + track?.artist,
                         requireInteraction: false,
-                        image: !track?.picurl ? undefined : api.processUrl(track.picurl)
+                        image: !track?.picurl ? undefined : api.processUrl(track.picurl)!,
+                        silent: true,
                     });
                 }
             });
@@ -807,4 +899,83 @@ class SidebarToggle extends View {
             }
         };
     }
+}
+
+class TouchPanListener {
+    onStart = new Callbacks<() => void>();
+    onMove = new Callbacks<(data: { deltaX: number; deltaY: number; }) => void>();
+    onEnd = new Callbacks<() => void>();
+    filter: (e: TouchEvent) => boolean;
+    constructor(
+        readonly element: HTMLElement,
+        public mode: 'x' | 'y' | 'both' = 'both',
+    ) { }
+
+    private _enabled = false;
+    get enabled() { return this._enabled; }
+    set enabled(v: boolean) {
+        if (v == this._enabled) return;
+        this._enabled = v;
+        if (v) {
+            this.element.addEventListener('touchstart', this._listener, true);
+        } else {
+            this.element.removeEventListener('touchstart', this._listener, true);
+        }
+    }
+
+    private _listener = (ev: TouchEvent) => {
+        if (this.filter && !this.filter(ev)) return;
+        if (ev.touches.length > 1) return;
+        var startX = ev.touches[0].pageX;
+        var startY = ev.touches[0].pageY;
+        var state: 'begin' | 'moving' | 'ignore' = 'begin';
+        const move = (ev: TouchEvent) => {
+            const x = ev.touches[0].pageX;
+            const y = ev.touches[0].pageY;
+            // console.info({ state, x, y, startX, startY });
+            if (state == 'ignore') return;
+            else if (state == 'moving') {
+                ev.preventDefault();
+                ev.stopPropagation();
+                var deltaX = x - startX;
+                var deltaY = y - startY;
+                this.onMove.invoke({ deltaX, deltaY });
+                startX = x;
+                startY = y;
+            } else { // begin
+                if (this.mode == 'x' && Math.abs(y - startY) > 10 && Math.abs(y - startY) > Math.abs(x - startX)) {
+                    state = 'ignore';
+                } else if (this.mode == 'y' && Math.abs(x - startX) > 10 && Math.abs(x - startX) > Math.abs(y - startY)) {
+                    state = 'ignore';
+                } else if (Math.abs(x - startX) > 10 || Math.abs(y - startY) > 10) {
+                    state = 'moving';
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    this.onStart.invoke();
+                }
+            }
+        };
+        const end = (ev: TouchEvent) => {
+            if (ev.touches.length == 0) {
+                if (state == 'moving') {
+                    this.onEnd.invoke();
+                }
+                this.element.removeEventListener('touchmove', move, true);
+                this.element.removeEventListener('touchend', end, true);
+                this.element.removeEventListener('touchcancel', end, true);
+            }
+        };
+        this.element.addEventListener('touchmove', move, true);
+        this.element.addEventListener('touchend', end, true);
+        this.element.addEventListener('touchcancel', end, true);
+    };
+}
+
+function numSoftLimit(num: number, low: number, high: number, factor: number) {
+    if (num > high) {
+        return high + (num - high) * factor;
+    } else if (num < low) {
+        return low + (num - low) * factor;
+    }
+    return num;
 }

@@ -10,7 +10,7 @@ import { Timer } from "../Infra/utils";
 import { ui } from "../Infra/UI";
 
 export const playerCore = new class PlayerCore {
-    audio: HTMLAudioElement;
+    audio: HTMLAudioElement | HTMLVideoElement;
     track: Track | null = null;
     trackProfile: Api.TrackFile | null = null;
     audioLoaded = false;
@@ -41,6 +41,7 @@ export const playerCore = new class PlayerCore {
         this.onStateChanged.invoke();
     }
     onStateChanged = new Callbacks<Action>();
+    onAudioCreated = new Callbacks<Action>();
 
     _loadRetryCount = 0;
     _loadRetryTimer = new Timer(() => {
@@ -80,7 +81,10 @@ export const playerCore = new class PlayerCore {
             siLoop.remove();
         }
 
-        this.audio = document.createElement('audio');
+        this.audio = document.createElement('video');
+        this.initAudio();
+    }
+    initAudio() {
         this.audio.crossOrigin = 'anonymous';
         this.audio.addEventListener('timeupdate', () => this.onProgressChanged.invoke());
         this.audio.addEventListener('canplay', () => {
@@ -107,11 +111,9 @@ export const playerCore = new class PlayerCore {
         this.audio.addEventListener('error', (e) => {
             console.error('[PlayerCore] audio error', e);
             var wasPlaying = this.state !== 'paused' && this.state !== 'stalled';
-            this.state = 'paused';
-            this.audioLoaded = false;
             if (this.track && this.track.url) {
                 let msg = I`Player error:` + '\n' + (e.message || I`Unknown error.`);
-                if (wasPlaying && this._loadRetryCount++ < 3) {
+                if (wasPlaying && this.state != 'playing' && this._loadRetryCount++ < 3) {
                     msg += '\n' + I`Retry after ${3} sec...`;
                     this._loadRetryTimer.timeout(3000);
                 }
@@ -129,6 +131,7 @@ export const playerCore = new class PlayerCore {
         });
         this.audio.addEventListener('volumechange', () => this.onVolumeChanged.invoke());
         this.audio.volume = this.siPlayer.data.volume;
+        this.onAudioCreated.invoke();
     }
     prev() { return this.next(-1); }
     next(offset?: number) {
@@ -168,8 +171,8 @@ export const playerCore = new class PlayerCore {
         this.track = track;
         this._loadRetryTimer.tryCancel();
         var sameTrack = oldTrack === track
-            || (oldTrack?.url === track?.url
-                || (track?.blob && track.blob === oldTrack?.blob));
+            || (track?.url && oldTrack?.url === track?.url)
+                || (track?.blob && track.blob === oldTrack?.blob);
         if (!sameTrack) {
             if (playNow && track) {
                 await this.loadTrack(track);
@@ -201,13 +204,17 @@ export const playerCore = new class PlayerCore {
             this.loadUrl(track.blob);
         } else {
             let cur = { profile: '', bitrate: 0, size: track.size } as Api.TrackFile;
-            var prefer = this.preferBitrate;
-            if (prefer && track.files) {
-                track.files.forEach(f => {
-                    if (!cur.bitrate || Math.abs(cur.bitrate - prefer) > Math.abs(f.bitrate - prefer)) {
-                        cur = f;
-                    }
-                });
+            if (track.type == 'video') {
+                cur = track.files![0];
+            } else {
+                var prefer = this.preferBitrate;
+                if (prefer && track.files) {
+                    track.files.forEach(f => {
+                        if (!cur.bitrate || Math.abs(cur.bitrate - prefer) > Math.abs(f.bitrate - prefer)) {
+                            cur = f;
+                        }
+                    });
+                }
             }
             let url: string;
             if (cur.size == -1) {

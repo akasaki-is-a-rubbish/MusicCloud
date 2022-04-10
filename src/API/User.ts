@@ -1,6 +1,6 @@
 // file: User.ts
 
-import { SettingItem, Callbacks, Action, TextCompositionWatcher } from "../Infra/utils";
+import { SettingItem, Callbacks, Action, TextCompositionWatcher, LoadingIndicator, i18n } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { listIndex } from "../Track/ListIndex";
 import { Dialog, View, TextBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply, Ref, FileSelector } from "../Infra/viewlib";
@@ -19,7 +19,7 @@ export const user = new class User {
         username: null! as string,
         passwd: undefined as (string | undefined),
         token: null! as string,
-        avatar: null as string | null,
+        avatar: undefined as string | undefined,
         lastBaseUrl: null! as string
     });
     loginDialog: LoginDialog;
@@ -29,7 +29,7 @@ export const user = new class User {
     role?: Api.UserInfo['role'];
     get isAdmin() { return this.role === 'admin'; }
 
-    private _serverOptions: Api.ServerOptions = {};
+    private _serverOptions: Api.ServerConfig = {};
     get serverOptions() { return this._serverOptions; }
 
     state: 'none' | 'logging' | 'error' | 'logged' = 'none';
@@ -43,13 +43,29 @@ export const user = new class User {
     init() {
         playerCore.onTrackChanged.add(() => this.playingTrackChanged());
         const preLogin = window['preload']?.preLoginTask;
-        if (this.info.username || preLogin) {
+        if (window['preload']?.['inputToken']) {
+            this.info.token = window['preload']['inputToken'];
+        }
+        if (this.info.username || this.info.token || preLogin) {
             this.login(preLogin ? { preLogin: preLogin } : { info: this.info }).then(null, (err) => {
                 Toast.show(I`Failed to login.` + '\n' + err, 5000);
             });
         } else {
             this.setState('none');
             this.openUI();
+        }
+
+        if (window.location.href.indexOf("#social-link-success") >= 0) {
+            window.history.replaceState(null, "", window.location.href.split("#social-link-success")[0]);
+            Toast.show(I`Account has been linked successfully.`, 5000);
+            new LoginSettingsDialog().show();
+        }
+        if (window.location.href.indexOf("#social-link-error") >= 0) {
+            var splits = window.location.href.split("#social-link-error=");
+            window.history.replaceState(null, "", splits[0]);
+            var error = splits[1];
+            Toast.show(I`Account linking error: ${i18n.get('social-link-error_' + error)}`, 5000);
+            new LoginSettingsDialog().show();
         }
     }
     openUI(login?: boolean, ev?: MouseEvent) {
@@ -79,6 +95,7 @@ export const user = new class User {
                 if (arg.info) {
                     const info = arg.info;
                     const token = info.token;
+                    console.info({ info, token });
                     resp = token ?
                         await api.get('users/me', {
                             auth: this.getBearerAuth(token)
@@ -127,7 +144,7 @@ export const user = new class User {
         var switchingUser = this.info.username != info.username;
         this.info.id = info.id;
         this.info.username = info.username;
-        this.info.avatar = info.avatar ?? null;
+        this.info.avatar = info.avatar ?? undefined;
         this.info.passwd = undefined;
         if (info.token) this.info.token = info.token;
         this.info.lastBaseUrl = api.baseUrl;
@@ -161,7 +178,7 @@ export const user = new class User {
                 return;
             }
         }
-        objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined });
+        objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined, avatar: undefined });
         this.role = undefined;
         this.siLogin.save();
         api.defaultAuth = null;
@@ -284,6 +301,7 @@ class LoginDialog extends Dialog {
     inputPasswd2 = new LabeledInput({ label: I`Confirm password`, type: 'password' });
     viewStatus = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
     btn = new ButtonView({ text: I`Login`, type: 'big' });
+    socialLogins: ButtonView[] = [];
     isRegistering = false;
     compositionWatcher: TextCompositionWatcher;
     constructor() {
@@ -318,6 +336,7 @@ class LoginDialog extends Dialog {
             this.btn.text = btn.text;
             this.tabLogin.updateWith({ active: !this.isRegistering });
             this.tabCreate.updateWith({ active: this.isRegistering });
+            this.socialLogins.forEach(x => x.hidden = this.isRegistering);
         };
         this.inputPasswd2.hidden = true;
 
@@ -328,6 +347,38 @@ class LoginDialog extends Dialog {
                 this.close();
             }
         }));
+
+        this.tabCreate.hidden = true;
+        this.inputUser.hidden = this.inputPasswd.hidden = this.btn.hidden = true;
+
+        const onServerconfig = (serverConfig: Api.ServerConfig) => {
+            this.tabCreate.hidden = serverConfig.allowRegistration == false;
+            this.inputUser.hidden = this.inputPasswd.hidden = this.btn.hidden = serverConfig.passwordLogin == false;
+            serverConfig.socialLogin?.forEach(l => {
+                const btn = new ButtonView({
+                    text: I`Login via ${l.name}`, type: 'big', onActive: () => {
+                        window.location.href = api.processUrl(`users/me/socialLogin?provider=${l.id}&returnUrl=${encodeURIComponent(window.location.href)}`);
+                    }
+                });
+                this.socialLogins.push(btn);
+                this.addContent(btn);
+            });
+        };
+
+        if (user.state == "logged") {
+            onServerconfig(user.serverOptions);
+        } else {
+            const li = new LoadingIndicator({});
+            this.addContent(li);
+            api.get("users/me/serverconfig")
+                .then(config => {
+                    li.removeFromParent();
+                    onServerconfig(config);
+                })
+                .catch((e) => {
+                    li.error(e);
+                });
+        }
     }
 
     show(...args: Parameters<Dialog['show']>) {
@@ -375,7 +426,7 @@ class LoginDialog extends Dialog {
 }
 
 class MeDialog extends Dialog {
-    btnChangePassword = new ButtonView({ text: I`Change password`, type: 'big' });
+    btnLoginSettings = new ButtonView({ text: I`Login settings`, type: 'big' });
     btnSwitch = new ButtonView({ text: I`Switch user`, type: 'big' });
     btnLogout = new ButtonView({ text: I`Logout`, type: 'big' });
     btnChangeAvatar = new ButtonView({ text: I`Change avatar`, type: 'normal' });
@@ -389,7 +440,11 @@ class MeDialog extends Dialog {
             {
                 tag: 'div.user-info',
                 child: [
-                    { tag: 'img.user-avatar', ref: domimg, src: api.processUrl(user.info.avatar!) },
+                    {
+                        tag: 'img.user-avatar', ref: domimg,
+                        src: user.info.avatar ? api.processUrl(user.info.avatar!) : '',
+                        hidden: !user.info.avatar,
+                    },
                     {
                         tag: 'div',
                         child: [
@@ -417,11 +472,11 @@ class MeDialog extends Dialog {
         };
         if (user.isAdmin)
             this.addContent(new View({ tag: 'p', textContent: I`You are admin.` }));
-        this.addContent(this.btnChangePassword);
+        this.addContent(this.btnLoginSettings);
         this.addContent(this.btnSwitch);
         this.addContent(this.btnLogout);
-        this.btnChangePassword.onActive.add((ev) => {
-            new ChangePasswordDialog().show(ev);
+        this.btnLoginSettings.onActive.add((ev) => {
+            new LoginSettingsDialog().show(ev);
             this.close();
         });
         this.btnSwitch.onActive.add((ev) => {
@@ -442,25 +497,88 @@ class MeDialog extends Dialog {
     }
 }
 
-class ChangePasswordDialog extends Dialog {
+class LoginSettingsDialog extends Dialog {
     inputPasswd = new LabeledInput({ label: I`New password`, type: 'password' });
     inputPasswd2 = new LabeledInput({ label: I`Confirm password`, type: 'password' });
-    status = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
+    status = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap;' });
     btnChangePassword = new ButtonView({ text: I`Change password`, type: 'big' });
     constructor() {
         super();
-        this.title = I`Change password`;
-        [this.inputPasswd, this.inputPasswd2, this.status, this.btnChangePassword]
-            .forEach(x => this.addContent(x));
+        this.title = I`Login settings`;
+        [
+            new SocialLogins(),
+            new View({ tag: 'h3', textContent: I`Change password` }),
+            this.inputPasswd,
+            this.inputPasswd2,
+            this.status,
+            this.btnChangePassword,
+        ].forEach(x => this.addContent(x));
         this.btnChangePassword.onActive.add(() => {
             if (!this.inputPasswd.value) {
                 this.status.text = (I`Please input the new password!`);
+                this.status.dom.style.color = 'red';
             } else if (this.inputPasswd.value !== this.inputPasswd2.value) {
                 this.status.text = (I`Password confirmation does not match!`);
+                this.status.dom.style.color = 'red';
             } else {
-                user.changePassword(this.inputPasswd.value);
-                this.close();
+                user.changePassword(this.inputPasswd.value).then(() => {
+                    this.status.text = I`Password changed.`;
+                    this.status.dom.style.color = '#00FF00';
+                });
             }
+        });
+    }
+}
+
+class SocialLogins extends View {
+    constructor() {
+        super({ tag: 'div' });
+        this.appendView(new View({ tag: 'h3', textContent: I`Linked accounts` }));
+        this.initAsync();
+    }
+
+    async initAsync() {
+        const statusView = new TextView({ tag: 'div', text: I`Loading`, style: 'color: var(--text-gray)' });
+        this.appendView(statusView);
+        await user.waitLogin(true);
+        const { links } = await api.get("users/me/socialLinks")
+        if (!links || links.length == 0) {
+            statusView.text = I`(Not available)`;
+            return;
+        } else {
+            statusView.removeFromParent();
+        }
+        links.forEach(x => {
+            this.appendView(new SocialLoginItem(x));
+        });
+    }
+}
+
+class SocialLoginItem extends View {
+    constructor(data: { id: string, name: string, username: string | null }) {
+        var btn: ButtonView;
+        super({
+            tag: 'div.social-login-item',
+            child: [
+                { tag: 'span.name', text: data.name + (data.username ? ` (${data.username})` : '') },
+                btn = new ButtonView({
+                    text: () => data.username ? I`Unlink` : I`Link`,
+                    onActive: () => {
+                        if (data.username) {
+                            api.delete({path: `users/me/socialLinks/${data.id}`}).then(() => {
+                                data.username = null;
+                                btn.updateDom();
+                                Toast.show(I`Account has been unlinked successfully.`, 5000);
+                            });
+                        } else {
+                            btn.disabled = true;
+                            api.post({path: `users/me/socialLinks/${data.id}?returnUrl=${encodeURIComponent(window.location.href)}`}).then(({url}) => {
+                                window.location.href = url;
+                            });
+                        }
+                    }
+                }),
+            ]
         });
     }
 }

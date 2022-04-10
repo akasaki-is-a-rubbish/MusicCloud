@@ -140,10 +140,12 @@ export class ContentView extends View {
         }
     }
     onDomInserted() { }
+    onShowing() { }
     updateDom() {
         super.updateDom();
         this._lastRenderedLanguage = ui.lang.curLang;
     }
+    onHiding() { }
     onRemove() {
         this._isVisible = false;
         this._shownEvents?.removeAll();
@@ -153,10 +155,12 @@ export class ContentView extends View {
 
     fadeIn() {
         this._fadeout?.cancel();
+        this.onShowing();
     }
 
     _fadeout: FadeoutResult | null = null;
     fadeOut() {
+        this.onHiding();
         this._fadeout = fadeout(this.dom, { remove: false }).onFinished(() => {
             this.onRemove();
             this.removeFromParent();

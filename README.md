@@ -21,6 +21,7 @@ You can easily [run your own MusicCloud instance in Docker](https://github.com/l
 * Search tracks
 * Lyrics with translation and ruby annotations, extended from LRC.
 * Comment and discussion
+* Login with OpenID Connect
 * More in [TODO](https://github.com/lideming/MusicCloud/projects/1)
 
 
@@ -51,15 +52,10 @@ Start the building process:
 pnpm build
 ```
 
-Then `bundle.js` should be generated from source files.
-
 
 ## Deploy
 
-Copy `index.html` and `bundle.js` to the static website folder (see `staticdir` in [server side configration](https://github.com/lideming/MusicCloudServer/blob/master/appsettings.json)).
-
-Note that `style.css` is included in `bundle.js`.
-
+Copy `dist/*` to the static website folder (see `staticdir` in [server side configration](https://github.com/lideming/MusicCloudServer/blob/master/appsettings.json)).
 
 ## Reusable Components
 

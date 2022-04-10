@@ -76,8 +76,9 @@ class PlayingView extends ContentView {
     viewToggle = new ViewToggle({
         container: this,
         items: {
+            'header': this.header,
             'normal': this.lyricsView,
-            'loading': this.loadingOuter
+            'loading': this.loadingOuter,
         }
     });
     editBtn: ActionBtn;
@@ -136,6 +137,14 @@ class PlayingView extends ContentView {
         });
         this.lyricsView.onShow();
     }
+    onShowing() {
+        super.onShowing();
+        ui.contentBg.toggleFullVideo(true);
+    }
+    onHiding() {
+        super.onHiding();
+        ui.contentBg.toggleFullVideo(false);
+    }
     onRemove() {
         super.onRemove();
         this.lyricsView.onHide();
@@ -155,9 +164,14 @@ class PlayingView extends ContentView {
 
         this.loadingOuter.dom.remove();
 
+        if (newTrack?.type == 'video') {
+            this.viewToggle.setShownKeys([]);
+            return;
+        }
+
         if (newTrack && !newTrack.isLyricsGotten()) {
             this.loading.reset();
-            this.viewToggle.setShownKeys(['loading']);
+            this.viewToggle.setShownKeys(['header', 'loading']);
             try {
                 newLyrics = await newTrack.getLyrics();
             } catch (error) {
@@ -170,7 +184,7 @@ class PlayingView extends ContentView {
             newLyrics = newTrack?.lyrics || '';
         }
 
-        this.viewToggle.setShownKeys(['normal']);
+        this.viewToggle.setShownKeys(['header', 'normal']);
 
         this.lyricsView.track = newTrack;
 
@@ -178,9 +192,7 @@ class PlayingView extends ContentView {
             this.loadedLyrics = newLyrics;
             this.lyricsView.reset();
             this.lyricsView.setLyrics(newLyrics);
-            return true;
         }
-        return false;
     }
 
 }

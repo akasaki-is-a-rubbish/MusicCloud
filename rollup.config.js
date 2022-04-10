@@ -1,44 +1,87 @@
 import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import { terser } from "rollup-plugin-terser";
+import copy from 'rollup-plugin-copy';
 
 import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
 
-/** @type {() => import('rollup').RollupOptions} */
-const rollupConfig = () => ({
-    input: './src/main.ts',
-    output: {
-        file: './bundle.js',
-        format: 'umd',
-        name: 'mcloud',
+/** @type {() => import('rollup').RollupOptions[]} */
+const rollupConfig = () => ([
+    {
+        input: './src/main.ts',
+        output: {
+            file: './dist/bundle.js',
+            format: 'umd',
+            name: 'mcloud',
+            plugins: [
+                terser({
+                    keep_classnames: true,
+                    keep_fnames: true,
+                }),
+            ],
+            sourcemap: true,
+            // sourcemapExcludeSources: true,
+            // sourcemapPathTransform: transformSourcemapPath(),
+        },
         plugins: [
-            terser({
-                keep_classnames: true,
-                keep_fnames: true,
-            }),
+            buildInfo(),
+            resolve(),
+            typescript(),
+            myText(),
+            jsonLoader(),
+            copy({
+                targets: [
+                    {
+                        src: [
+                            'index.html',
+                        ],
+                        dest: './dist/',
+                    },
+                    {
+                        src: [
+                            'resources/app_icon.svg',
+                            'resources/manifest.json',
+                        ],
+                        dest: './dist/resources/',
+                    }
+                ]
+            })
         ],
-        sourcemap: true,
-        // sourcemapExcludeSources: true,
-        sourcemapPathTransform: transformSourcemapPath(),
+        context: 'window'
     },
-    plugins: [
-        buildInfo(),
-        resolve(),
-        typescript(),
-        myText(),
-        jsonLoader(),
-    ],
-    context: 'window'
-});
+    {
+        input: './src/ServiceWorker/sw.ts',
+        output: {
+            file: './dist/sw.bundle.js',
+            format: 'iife',
+            plugins: [
+                // terser({
+                //     keep_classnames: true,
+                //     keep_fnames: true,
+                // }),
+            ],
+            sourcemap: true,
+            // sourcemapExcludeSources: true,
+            sourcemapPathTransform: transformSourcemapPath(),
+        },
+        plugins: [
+            buildInfo(),
+            resolve(),
+            typescript(),
+        ],
+    },
+]);
+
+let _buildInfo = null;
 
 async function getBuildInfo() {
-    return JSON.stringify({
+    return _buildInfo || (_buildInfo = JSON.stringify({
         version: require('./package.json').version,
         buildDate: new Date().toISOString(),
         commits: await getCommits(),
-    });
+    }));
 }
 
 async function getCommits() {
