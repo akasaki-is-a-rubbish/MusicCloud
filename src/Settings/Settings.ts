@@ -3,9 +3,9 @@ export const settings = {
     apiBaseUrl: '',
     debug: true,
     apiDebugDelay: 0,
-    showDownloadOptions: true,
-    showDiscussion: true,
-    showNotes: true,
+    showDownloadOptions: false,
+    showDiscussion: false,
+    showNotes: false,
 
     init() {
         var server = localStorage.getItem('mcloud-server');
