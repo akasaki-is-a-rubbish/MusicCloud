@@ -1403,3 +1403,12 @@ html, body {
     display: inline-block;
     margin: 0;
 }
+
+.bottombar {
+    padding-left: 330px;
+    zoom: 1.25;
+}
+
+#main-container {
+    height: calc(100% - 75px);
+}
