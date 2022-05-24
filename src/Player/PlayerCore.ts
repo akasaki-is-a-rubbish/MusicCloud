@@ -58,6 +58,8 @@ export const playerCore = new class PlayerCore {
     }
     onProgressChanged = new Callbacks<Action>();
 
+    get isVideo() { return this.track?.type == "video"; }
+
     get volume() { return this.audio?.volume ?? 1; }
     set volume(val) {
         this.audio.volume = val;
@@ -70,7 +72,7 @@ export const playerCore = new class PlayerCore {
 
     get playbackRate() { return this.audio.playbackRate; }
 
-    get isPlaying() { return !!this.audio.duration && !this.audio.paused; }
+    get isPlaying() { return this.audio && !!this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
     get canPlay() { return this.audio.readyState >= 2; }
     init() {
@@ -138,8 +140,6 @@ export const playerCore = new class PlayerCore {
         var nextTrack = this.getNextTrack(offset);
         if (nextTrack)
             this.playTrack(nextTrack, true);
-        else
-            this.setTrack(null);
     }
 
     getNextTrack(offset?: number) {

@@ -21,8 +21,9 @@ body {
     --color-primary-dark: hsl(5, 100%, 40%);
     --color-primary-dark-depends: hsl(5, 100%, 40%);
     --color-primary-verydark: hsl(5, 100%, 20%);
-    --color-primary-light: hsl(5, 100%, 83%);
     --color-primary-lighter: hsl(5, 100%, 70%);
+    --color-primary-light: hsl(5, 100%, 83%);
+    --color-primary-really-light: hsl(5, 100%, 90%);
     --color-fg-11: #111111;
     --color-fg-22: #222222;
     --color-fg-33: #333333;
@@ -61,6 +62,10 @@ ul, li {
 
 a {
     color: var(--color-text);
+}
+
+.btn {
+    box-shadow: 0 0 2px var(--color-light-shadow);
 }
 
 .icon {
@@ -162,13 +167,10 @@ html, body {
 }
 
 #main-container {
-    height: calc(100% - 15px);
+    /* height: calc(100% - 15px); */
+    height: calc(100% - 60px);
     position: relative;
     contain: strict;
-}
-
-.bottompinned #main-container {
-    height: calc(100% - 75px);
 }
 
 #sidebar, #content-outer {
@@ -267,12 +269,13 @@ html, body {
     align-items: center;
     height: 3em;
     overflow: hidden;
+    padding-right: 5px;
 }
 
 #login-state .user-avatar {
     width: 40px;
     height: 40px;
-    margin: 0 10px 0 0;
+    margin: 0 5px 0 0;
     flex: 0 0 0;
 }
 
@@ -608,7 +611,7 @@ html, body {
     -webkit-box-orient: vertical;
 }
 
-.trackitem .artist, #bottombar-trackinfo .artist {
+.trackitem .artist {
     color: var(--color-text-gray);
 }
 
@@ -683,138 +686,197 @@ html, body {
 
 /* .trackitem .artist::before,  */
 
-#bottombar-trackinfo .artist::before {
-    content: " - ";
-    color: var(--color-text-gray);
-}
-
 #main-container::after {
     content: "";
     clear: both;
 }
 
-#bottombar {
+.bottombar {
     position: fixed;
-    left: 400px;
-    right: 0;
-    bottom: -45px;
-    height: 75px;
-    transform: translate(0, 0);
-    transition: transform .3s;
-    background: var(--color-bg);
-    /* box-shadow: 0 0px 5px var(--color-shadow); */
-    z-index: 10001;
-    contain: layout;
-    will-change: transform;
-}
-
-.bottompinned #bottombar {
-    /* box-sizing: content-box;
-    box-shadow: none;
-    /* border-top: 1px solid var(--color-bg-cc); */
-}
-
-#bottombar.show {
-    transform: translate(0, -45px);
-}
-
-#progressbar {
-    position: absolute;
+    bottom: 0;
     width: 100%;
-    height: 20px;
-    transition: width .3s, transform .3s, border-radius .3s, background-color .2s;
-    cursor: pointer;
-    overflow: hidden;
-}
-
-#progressbar-fill {
-    height: 100%;
-    transition: border-radius .3s, background-color .2s;
-}
-
-#progressbar .loudness {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    opacity: .5;
-}
-
-#bottombar.show #progressbar {
-    width: calc(100% - 2em - 180px);
-    transform: translate(calc(1em + 180px), 7.5px);
-}
-
-#bottombar.show #progressbar, #bottombar.show #progressbar-filxl {
-    border-radius: 12.5px;
-}
-
-#progress-outer {
-    padding-left: 180px;
-    position: absolute;
-    top: 9px;
-    height: .7em;
-    width: 100%;
-}
-
-#progressbar-label-cur, #progressbar-label-total {
-    display: none;
-    width: 3em;
-    margin: 0 10px;
-    text-align: center;
-    font-size: 70%;
-    line-height: 1;
-    transition: transform .3s;
-}
-
-#progressbar-label-cur {
-    float: left;
-    transform: translate(-50px, 0);
-}
-
-#progressbar-label-total {
-    float: right;
-    transform: translate(50px, 0);
-}
-
-.show #progressbar-label-cur, .show #progressbar-label-total {
-    transform: translate(0, 0);
-}
-
-#bottombar-btns {
-    position: absolute;
-    left: 180px;
-    bottom: 8px;
-    width: calc(100% - 20px - 180px);
-}
-
-#playcontrol {
-    position: absolute;
-    left: 10px;
     display: flex;
+    height: 60px;
+    align-items: center;
+    padding: 0 8px;
+    box-shadow: 0 0px 3px var(--color-shadow);
 }
 
-#playcontrol > * {
-    color: var(--color-primary);
-    margin: 10px 5px;
-    font-size: 50px;
+.bottombar .trackpic {
+    height: 50px;
+    width: 50px;
+    border-radius: 8px;
+    transition: width .3s, opacity .3s;
 }
 
-#bottombar-btns .prev_n_next {
-    height: 1.4em;
-    font-size: 30px;
+.bottombar .trackpic.noimg {
+    width: 0;
+    opacity: 0;
+}
+
+.bottombar .progress-bar {
+    display: flex;
+    align-items: center;
+    margin-top: 2px;
+    cursor: pointer;
+}
+
+.bottombar .progress-bar .background {
+    flex: 1;
+    background: var(--color-primary-really-light);
+    height: 14px;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.bottombar .progress-bar .fill {
+    background: var(--color-primary);
+    height: 14px;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.bottombar .progress-bar .loudness-map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: .3;
+}
+
+.bottombar .progress-bar .time {
+    text-align: center;
+    width: 3.5em;
+    font-size: 12px;
     line-height: 1;
-    margin: 0 .3em;
+    font-weight: 300;
+    margin: 0 2px;
+}
+
+.bottombar .control-split-h {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.bottombar .bottom-controls {
+    display: flex; 
+    align-items: center;
+    margin-top: 4px;
+    padding-left: 8px;
+}
+
+.bottombar .control-btn {
+    display: grid;
+    place-content: center;
+    width: 24px;
+    height: 24px;
+    margin: 0 4px;
+    border-radius: 50%;
+}
+
+.bottombar .control-btn svg {
+    filter: drop-shadow(0 0 1px var(--color-light-shadow));
+}
+
+.bottombar .control-btn.disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.bottombar .play-btn {
+    background: var(--color-primary);
+    width: 34px;
+    height: 34px;
+}
+
+.bottombar .play-btn svg {
+    filter: none;
+}
+
+.bottombar .volume-btn {
+    width: 55px;
+    margin: 0 8px;
+    height: 14px;
+}
+
+.bottombar .volume-btn span {
+    position: absolute;
+    left: 4px;
+    top: 0;
+    font-size: 0;
+    line-height: 14px;
+}
+
+.bottombar .volume-btn span svg {
     vertical-align: middle;
 }
 
-#bottombar-trackinfo {
-    display: block;
-    margin: 0 1em;
-    text-align: center;
-    max-height: 1.5em;
-    line-height: 1.4;
-    overflow: hidden;
+.bottombar .track-info {
     cursor: pointer;
+    flex: 1;
+    text-align: left;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    margin: 0 8px;
+}
+
+.bottombar .track-info .artist {
+    color: var(--color-text-gray);
+}
+
+.bottombar .track-info .artist::before {
+    content: " - ";
+}
+
+.bottombar .lyrics {
+    flex: 1;
+    text-align: center;
+    height: 30px;
+    overflow: hidden;
+    position: relative;
+    margin-left: 8px;
+}
+
+.bottombar .lyrics .line {
+    position: absolute;
+    width: 100%;
+    top: 50%;
+    transform: translate(0, -50%);
+    animation: fadein .3s;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.bottombar .lyrics .span.active {
+    color: var(--color-primary);
+}
+
+@media only screen  and (max-width: 800px) {
+    .bottombar .track-info {
+        order: 1;
+    }
+    .bottombar.has-lyrics .track-info {
+        display: none;
+    }
+    .bottombar.no-lyrics .lyrics {
+        display: none;
+    }
+    .bottombar .lyrics {
+        text-align: left;
+        text-align: start;
+    }
 }
 
 #sidebar-header, #sidebar-features {
@@ -897,15 +959,15 @@ html, body {
 }
 
 .btn-progress, .keyboard-input .btn-progress:focus {
-    background: #9a0007;
+    background: var(--color-primary-really-light);
 }
 
 .btn-progress:hover, .keyboard-input .btn-progress:focus:hover {
-    background-color: hsl(5, 100%, 20%);
+    background-color: var(--color-primary-really-light);
 }
 
 .btn-progress.btn-down, .btn-progress:active {
-    background-color: hsl(5, 100%, 10%);
+    background-color: var(--color-primary-light);
 }
 
 .btn-progress .text {
@@ -1034,6 +1096,12 @@ html, body {
     overflow: auto;
     will-change: transform;
     /* animation: showing .3s; */
+    scrollbar-width: thin;
+}
+
+.playingview .lyricsview::-webkit-scrollbar,
+.lyricsedit .lyricsview::-webkit-scrollbar {
+    width: 8px;
 }
 
 .lyricsview .line {
@@ -1114,6 +1182,7 @@ html, body {
 }
 
 .volume-tip {
+    font-size: 14px;
     animation: volume-tip-animation .2s;
     pointer-events: none;
 }

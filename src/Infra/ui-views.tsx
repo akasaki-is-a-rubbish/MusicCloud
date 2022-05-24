@@ -47,43 +47,6 @@ export class Sidebar extends View {
     }
 }
 
-export class BottomBar extends View {
-    btnPlay = new Ref<HTMLElement>();
-    btnPrev = new Ref<HTMLElement>();
-    btnNext = new Ref<HTMLElement>();
-    progressBar = new View(
-        <div class="btn-progress" id="progressbar">
-            <div class="btn-fill" id="progressbar-fill"></div>
-        </div>
-    );
-    createDom() {
-        return (
-            <div id="bottombar">
-                <div id="progress-outer">
-                    <div class="no-selection" id="progressbar-label-cur">--:--</div>
-                    <div class="no-selection" id="progressbar-label-total">--:--</div>
-                </div>
-                {this.progressBar}
-                <div id="playcontrol">
-                    <div id="btn-prevtrack" class="prev_n_next clickable" tabindex="0" ref={this.btnPrev}><Icon icon={svgPrev} /></div>
-                    <div id="btn-play" class="clickable" tabindex="0" ref={this.btnPlay}></div>
-                    <div id="btn-nexttrack" class="prev_n_next clickable" tabindex="0" ref={this.btnNext}><Icon icon={svgNext} /></div>
-                </div>
-                <div id="bottombar-btns" class="flexbox-h">
-                    {/* <div id="btn-volume" class="btn" tabindex="0"></div> */}
-                    {/* <div id="btn-loop" class="btn" tabindex="0" hidden></div> */}
-                    <div id="bottombar-trackinfo" class="flex-1 no-selection clickable"></div>
-                    {/* <div class="btn" id="btnPin" tabindex="0">Pin</div> */}
-                </div>
-            </div>
-        );
-    }
-    setPlayIcon(play: boolean) {
-        const btn = this.btnPlay.value!;
-        clearChildren(btn);
-        btn.appendChild(new Icon({ icon: play ? svgPlay : svgPause }).dom);
-    }
-}
 
 export class SidebarItem extends ListViewItem {
     _text: FuncOrVal<string> = '';
