@@ -1,4 +1,4 @@
-# MusicCloud
+# MusicCloud (for DrivingUI)
 
 ![](./resources/playing.jpg)
 
